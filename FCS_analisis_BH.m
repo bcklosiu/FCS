@@ -1,10 +1,32 @@
-function [FCSdata, FCSdataALINcorregido, imgDecode, imgROI, imgALIN, tPromedioLS, Data_bin, G_intervalos, FCSmean, Gmean, talin, tdecode]=FCS_analisis_BH(fname,...
-    intervalos, numsecciones, numpuntos, base, tlagmax, numintervalos, tipocorrelacion, binfreq)
-% 
-% fname es el nombre del archivo SPC
-% TAC range y TACgain dependen del reloj SYNC. 
-% intervalos, numsecciones, numpuntos, base, tlagmax, numintervalos, tipocorrelacion NO SÉ QUÉ es
-% binfreq es la frecuencia del binning, en Hz
+function [FCSdata, FCSdataALINcorregido, imgDecode, imgROI, imgALIN, tPromedioLS, Data_bin, G_intervalos, FCSmean, Gmean, tdecode]=...
+    FCS_analisis_BH (fname, binFreq, intervalos, numSecciones, numPuntos, base, tauLagMax, numSubIntervalosError, tipoCorrelacion)
+
+%
+% [FCSdata, FCSdataALINcorregido, imgDecode, imgROI, imgALIN, tPromedioLS,Data_bin, G_intervalos, FCSmean, Gmean, tdecode]=
+% FCS_analisis_BH (fname, intervalos, numSecciones, numPuntos, base, tauLagMax, numSubIntervalosError, tipoCorrelacion, binFreq)
+%
+%  fname es el nombre del archivo SPC
+%  binFreq es la frecuencia del binning, en Hz
+%  intervalos es el número de intervalos en los que dividimos la traza temporal. Generalmente son de 10s cada uno
+%Parámetros del algoritmo multitau
+%  numSecciones es el número de secciones en las que divide la curva de correlación
+%  base define la resolución temporal de cada sección
+%  numPuntos es el número de puntos en los que se calcula la curva de
+%  autocorrelación (en cada sección). numPuntos define, por tanto, la precisión del ajuste
+%  tauLagMax es el último punto temporal (tiempo máximo) para el que se
+%  calcula la correlación (con todos los fotones adquiridos, incluyendo los de momentos posteriores a tauLagMax)
+%
+% Parámetros del cálculo de la incertidumbre
+%  numSubIntervalosError es el número de subintercalos para los que calcula la
+%  correlación y que utiliza para obtener la incertidumbre (error estándar) de cada punto de
+%  la curva de correlación
+%
+%  tipoCorrelacion puede ser auto, cross o todas 
+%
+% TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
+%
+% ULS Sep2014
+% jri 25Nov14
 
 isOpen=matlabpool ('size')>0;
 if isOpen==0 %Inicializa matlabpool con el máximo numero de cores
@@ -15,15 +37,15 @@ if isOpen==0 %Inicializa matlabpool con el máximo numero de cores
 matlabpool ('open', numWorkers) 
 end
 
+
 [fblock,TACrange,TACgain]=loadFIFO(fname); %Carga en la RAM (como enteros de 32 bits), cada evento del archivo FIFO. Calcula TAC gain y TAC range.
-
 tic;[FCSdata, imgDecode, frameSync, lineSync, pixelSync]= decodeFIFObinary_parallel (fblock, TACrange, TACgain);tdecode=toc; %Decodifica los eventos de BH
-
 %Guarda el archivo decoficado antes de empezar con la alineación
 save ([fname(1:end-4) '.mat'])
 
+
 numCanales=numel(unique(FCSdata(:,6)));
-isSCanningFCS=and(numel(imgDecode)>1,and(numel(frameSync)>1,and(numel(lineSync)>1,numel(pixelSync)>1)));
+isSCanningFCS=and (numel(imgDecode)>1, and(numel(frameSync)>1, and(numel(lineSync)>1, numel(pixelSync)>1)));
 if isSCanningFCS==1
     %Seleccionar ROI de la imagen decodificada   
     [imgROI, indLinesFCS, indLinesLS, indLinesPS, offset] = FCS_ROI(imgDecode, FCSdata, lineSync, pixelSync); 
@@ -57,7 +79,7 @@ if isSCanningFCS==1
     imgBin=imgDecode(:,pixelROIdesde:pixelROIhasta,:); %Imagen que se utilizará para el binning temporal
     [Data_bin, deltat_bin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, multiploLineas); % Binning temporal de imgBIN, en múltiplos de línea de la imagen
     
-else %isSCanningFCS==0
+else %isSCanningFCS==0 -  Esto es FCS puntual
     imgDecode=0;
     imgROI=0;
     imgALIN=0;
@@ -73,12 +95,12 @@ else %isSCanningFCS==0
             end
             t0=min(t0channels);
     end
-    [Data_bin, sampfreq_bin, deltat_bin]=FCS_binning_FIFO_pixel1(FCSdata, binfreq, t0); %Binning temporal de FCSdataALINcorregido con los datos del Macro Time+micro 
+    [Data_bin, sampfreq_bin, deltat_bin]=FCS_binning_FIFO_pixel1(FCSdata, binFreq, t0); %Binning temporal de FCSdataALINcorregido con los datos del Macro+micro times
 end %end if isSCanningFCS
 
 dataIntervalos= FCS_troceador(Data_bin, intervalos);
-G_intervalos= FCS_matriz (dataIntervalos, numintervalos, deltat_bin, numsecciones, numpuntos, base, tlagmax, tipocorrelacion);
-[FCSmean Gmean]=FCS_promedio(G_intervalos, dataIntervalos, [1:intervalos], deltat_bin, tipocorrelacion);
+G_intervalos= FCS_matriz (dataIntervalos, numSubIntervalosError, deltat_bin, numSecciones, numPuntos, base, tauLagMax, tipoCorrelacion);
+[FCSmean Gmean]=FCS_promedio(G_intervalos, dataIntervalos, [1:intervalos], deltat_bin, tipoCorrelacion);
 
 save ([fname(1:end-4) '.mat'])
 

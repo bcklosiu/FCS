@@ -8,7 +8,9 @@ function  [arrivalTimesOUT, twoDIntensity, frameSync, lineSync, pixelSync]= deco
 % frameSync tiene el timing de comienzo de cada (frame, arrivalTime)
 % lineSync el de cada frame y línea (frame, line, arrivalTime)
 % pixelSync el de cada frame y línea (frame, line, pixel, arrivalTime)
-% arrivalTimes indica el frame, la línea el pixel, los tiempos (macro y micro, en s) y el canal de cada fotón.
+% arrivalTimes indica el frame, la línea el pixel, los tiempos (macro y micro, en s) y el canal de cada fotón
+%
+% ULS Sep14?
 
 
 INVALID32=uint32(hex2dec('80000000'));

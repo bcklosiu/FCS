@@ -1,48 +1,60 @@
-function [Data_bin, sampfreq_bin, deltat_bin]=FCS_binning_FIFO_pixel1(FCSdata, binfreq, t0)
+function dataBin=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0)
 
-% [Data_bin, sampfreq_bin, deltat_bin]=FCS_binning_FIFO_pixel1(FCSdata, binfreq, t0);
+% [dataBin, deltaTBin]=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0);
 %
 % Esta función hace un binning temporal del archivo que le especifiquemos,
 % INPUT ARGUMENTS:
-%   FCSdata - es la matriz de una o dos columnas que devuelve el programa ISSread
-%   binfreq - es la frecuencia que queremos aplicar al binning (en Hz)
+%   arrivalTimes - es la matriz de los arrival times de los fotones de B&H
+%   binFreq - es la frecuencia que queremos aplicar al binning (en Hz)
 %   t0 - es el tiempo de referencia que se le resta a todos los canales
 % OUTPUT ARGUMENTS:
-%   Data_bin - es la nueva matriz con la traza temporal y el binning aplicado
-%   sampfreq_bin - es igual a binfreq
-%   deltat_bin - es el deltat para la nueva frecuencia de binning
+%   dataBin - es la nueva matriz con la traza temporal y el binning aplicado
 %
 % Modificado jri para incluir el microtime 11abr14
 % Modificado por Unai para calcular automáticamente el nº de canales
+%
+% jri - 26Nov14 - Considera que arrivalTimes de FCS puntual sólo tiene 3
+% columnas en vez de 6
 
-channels=sort(unique(FCSdata(:,6)),'ascend');
-nrChannels=numel(channels);
-sampfreq_bin=binfreq;
-deltat_bin=1/sampfreq_bin; %en segundos
-numFotCh=zeros(nrChannels,1); %Número de fotones de cada canal  
-Data=zeros(size(FCSdata,1),nrChannels); %Matriz de tiempos por canal
 
-for cc=1:nrChannels, %Identifica los fotones de cada canal
-    indsxCh=FCSdata(:,6)==channels(cc);
-    numFotCh(cc)=numel(find(indsxCh==1));
-    Data(1:numFotCh(cc),cc)=FCSdata(indsxCh,4)+FCSdata(indsxCh,5)-t0; %MT+mT-tiempo referencia
-end %end for (cc)
-Data(max(numFotCh)+1:end,:)=[];
-
-MTmax=max(Data(:)); %MT del último fotón válido
-numfilData_bin=MTmax/(deltat_bin); %Nro. de filas de Data_bin
-if rem(MTmax,deltat_bin)==0,
-    dimData_bin=ceil(numfilData_bin)+1;
+isScanning = logical(size(arrivalTimes,2)-3);
+if isScanning
+    macroTimeCol=4;
+    microTimeCol=5;
+    channelsCol=6;
 else
-    dimData_bin=ceil(numfilData_bin);
+    macroTimeCol=1;
+    microTimeCol=2;
+    channelsCol=3;
 end
 
-Data_bin=zeros(dimData_bin,nrChannels);
-for d=1:nrChannels,
+channels=sort(unique(arrivalTimes(:, channelsCol)),'ascend');
+nrChannels=numel(channels);
+deltaTBin=1/binFreq; %Período de binning
+numFotCh=zeros(nrChannels,1); %Número de fotones de cada canal
+data=zeros(size(arrivalTimes,1),nrChannels); %Matriz de tiempos por canal
+
+for cc=1:nrChannels, %Identifica los fotones de cada canal
+    indsxCh=arrivalTimes(:, channelsCol)==channels(cc);
+    numFotCh(cc)=numel(find(indsxCh==1));
+    data(1:numFotCh(cc),cc)=arrivalTimes(indsxCh, macroTimeCol)+arrivalTimes(indsxCh, microTimeCol)-t0; %MT+mT-tiempo referencia
+end %end for (cc)
+data(max(numFotCh)+1:end,:)=[];
+
+MTmax=max(data(:)); %MT del último fotón válido
+numfildataBin=MTmax/(deltaTBin); %Nro. de filas de dataBin
+if rem(MTmax,deltaTBin)==0,
+    dimDataBin=ceil(numfildataBin)+1;
+else
+    dimDataBin=ceil(numfildataBin);
+end
+
+dataBin=zeros(dimDataBin, nrChannels);
+for d=1:nrChannels
     binHasta=numFotCh(d); %límite superior del for anidado
-    for dd=1:binHasta,
-        indice_bin=floor(Data(dd,d)/deltat_bin);
-        Data_bin(indice_bin+1,d)=Data_bin(indice_bin+1,d)+1;
+    for dd=1:binHasta
+        indice_bin=floor(data(dd,d)/deltaTBin);
+        dataBin(indice_bin+1,d)=dataBin(indice_bin+1,d)+1;
     end %end for (dd)
 end %end for (d)
 
