@@ -209,7 +209,7 @@ function pushbutton_saveForPyCorrFit_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); 
 set (handles.figure1,'Pointer','watch')
 drawnow update
-g=FCS_savePyCorrformat(v.S.Gintervalos(:,:,1), v.S.FCSintervalos(:,:,1), v.S.binFreq);
+g=FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq);
 disp (['Saving ' v.S.fname ' for PyCorrFit'])
     save ([v.path v.S.fname(1:end-4) '_PyCFit.mat'], 'g')
 disp ('OK')
