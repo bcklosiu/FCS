@@ -1,12 +1,20 @@
-function [imgOUT, indLinesFCS, indLinesLS, indLinesPS, offset] = FCS_ROI(imgIN, FCSdata, lineSync, pixelSync)
+function [imgOUT, indLinesFCS, indLinesLS, indLinesPS, timeInterval] = FCS_ROI(imgIN, FCSdata, lineSync, pixelSync)
 
 % [imgOUT, indLinesFCS, indLinesLS, indLinesPS, offset] = FCS_ROI(imgIN, FCSdata, lineSync, pixelSync)
-% Crea una ROI rectangular para la imagen de entrada, y calcula los índices de FCSdata, lineSync y pixelSync que están dentro de ella.
+%Crea una ROI rectangular para la imagen de entrada, y calcula los índices de FCSdata, lineSync y pixelSync que están dentro de ella.
+%
+%   indLinesFCS es una matriz lógica con los índices de los fotones de FCSData en la ROI (en true)
+%   indLinesLS los índices de las líneas de lineSync en la ROI (en true)
+%   indLinesPS los índices de las píxeles de pixelSync en la ROI (en true)
+%   timeInterval el rango de tiempos del ROI
+% 
 % Unai, 01/07/2014
+% jri 4Dec14 - He cambiado el offset y he añadido el rango de líneas
 
 numFilasIMG=size(imgIN,1);
 numColsIMG=size(imgIN,2);
 tFinal=FCSdata(end,4)+FCSdata(end,5);
+scanningFreq=1400; %cuidado!! Esto depende de la frecuencia de barrido!!
 
 %binfreq=1/((FCSdata(end,4)+FCSdata(end,5))/100);
 %[Data_bin, sampfreq_bin, deltat_bin]=FCS_binning_FIFO(FCSdata, binfreq);
@@ -54,6 +62,7 @@ for r1=1:numFrames %Completa FCSdataRedux,lineSyncRedux,pixelSyncRedux
 end
 
 h_fig=figure; 
+set (h_fig, 'Color', [1 1 1])
 
 h_axesRGB=axes; %Handle de los ejes de la figura con el tiempo reducido
 
@@ -63,20 +72,28 @@ imagesc(imgRGBtrasp); axis off
 
 h_axesROI=axes;
 set (h_axesROI, 'XLim', [0.5 numFilasIMG+0.5], 'YLim', [0.5 numColsIMG+0.5], 'YDir', 'reverse', 'Color', 'none')
-timeLabels=get (h_axesROI, 'XTick')/1400;
+timeLabels=get (h_axesROI, 'XTick')/scanningFreq; %cuidado!! Esto depende de la frecuencia de barrido!!
 set (h_axesROI, 'XTickLabel', {num2str(round(timeLabels'))});
-xlabel ('t (s)')
+xlabel ('Time (s)')
+ylabel ('Pixel number (also time - convert?)')
+set ([h_axesRGB h_axesROI], 'FontName', 'Calibri')
 
-
+%ROI
 hroi=imrect(h_axesROI, coords); %Crea un rectángulo, y el handle de la ROI.
 fcn = makeConstrainToRectFcn('imrect',  [0.5 numFilasIMG+0.5], [0.5 numColsIMG+0.5]); %Encuentra los límites de la imagen
 setPositionConstraintFcn(hroi, fcn); %Fija esos límites para la ROI 
-coords=wait(hroi); %Coordenadas de la ROI = [x0,y0,deltaX,deltaY], x= coord. temporal, y=coord. espacial 
-close(h_fig) 
+coords=wait(hroi); %Coordenadas de la ROI = [x0, y0, deltaX, deltaY], x= coord. temporal, y=coord. espacial 
+set (h_fig,'Pointer','watch')
+drawnow update
 
-coordsAbs=[coords(1),coords(2),coords(1)+coords(3),coords(2)+coords(4)]; % Coordenadas absolutas de la imagen: [x0,y0,xfinal,yfinal]
-imgOUT=imgIN(ceil(coordsAbs(1)):floor(coordsAbs(3)),ceil(coordsAbs(2)):floor(coordsAbs(4)),:);
-offset=floor(coordsAbs(2));
+coordsAbs=[coords(1), coords(2), coords(1)+coords(3), coords(2)+coords(4)]; % Coordenadas absolutas de la imagen: [x0,y0,xfinal,yfinal]
+imgOUT=imgIN(ceil(coordsAbs(1)):floor(coordsAbs(3)), ceil(coordsAbs(2)):floor(coordsAbs(4)),:);
+timeInterval=[ceil(coordsAbs(1)) floor(coordsAbs(3))]/scanningFreq;
+%offset=floor(coordsAbs(2));
+
 indLinesFCS=and(and(FCSdataRedux>coordsAbs(1),FCSdataRedux<coordsAbs(3)), and(FCSdata(:,3)>coordsAbs(2),FCSdata(:,3)<coordsAbs(4)));
 indLinesLS=and(lineSyncRedux>coordsAbs(1),lineSyncRedux<coordsAbs(3));
 indLinesPS=and(and(pixelSyncRedux>coordsAbs(1),pixelSyncRedux<coordsAbs(3)), and(pixelSync(:,3)>coordsAbs(2),pixelSync(:,3)<coordsAbs(4)));
+
+set (h_fig,'Pointer','arrow')
+close(h_fig) 

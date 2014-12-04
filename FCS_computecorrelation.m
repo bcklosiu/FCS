@@ -2,14 +2,13 @@ function varargout=FCS_computecorrelation (varargin)
 
 %
 % Scanning FCS:
-%[FCSintervalos, Gintervalos, FCSmean, Gmean, tData, imgROI, imgALIN, tPromedioLS]=...
-%    FCS_analysis (photonArrivalTimes, imgDecode, numIntervalos, binFreq, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion...
+%[FCSintervalos, Gintervalos, FCSmean, Gmean, tData, binFreq]=...
+%    FCS_computecorrelation (photonArrivalTimes, numIntervalos, binLines, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion...
 %    imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5);
-%
 %
 % Point FCS
 %[FCSintervalos, Gintervalos, FCSmean, Gmean]=...
-%   FCS_analysis (photonArrivalTimes, numIntervalos, binFreq, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion)
+%   FCS_computecorrelation (photonArrivalTimes, numIntervalos, binFreq, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion)
 %
 %
 %   FCSintervalos es FCSData de cada intervalo (los datos de FCS en bins temporales de tamaño deltaT=1/binFreq)
@@ -18,7 +17,9 @@ function varargout=FCS_computecorrelation (varargin)
 %   Gmean es el promedio de todas las curvas de correlación
 %
 %   photonArrivalTimes es la matriz de tiempos de llegada (arrivalTimes) de B&H
-%   binFreq es la frecuencia del binning, en Hz
+%   binFreq es la frecuencia del binning, en Hz.
+%   en el caso de scanning FCS usamos multiploLineas que es el número de
+%   líneas sobre las que se hace binning. En este caso binFreq sería scanning frequency/multiploLineas
 %   numIntervalos es el número de numIntervalos en los que dividimos la traza temporal. Generalmente son de 10s cada uno
 %Parámetros del algoritmo multitau
 %   numSecciones es el número de secciones en las que divide la curva de correlación
@@ -32,7 +33,8 @@ function varargout=FCS_computecorrelation (varargin)
 %   tipoCorrelacion puede ser auto, cross o todas 
 %
 %   TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
-%
+%   
+%   binLines es el número de líneas con las que se hace binning en el caso de scanning FCS    
 %
 %   En el caso de scanning FCS hay que llamar antes a FCS_align, que hace
 %   el ROI y después la alineación
@@ -44,7 +46,6 @@ function varargout=FCS_computecorrelation (varargin)
 
 photonArrivalTimes=varargin{1};
 numIntervalos=varargin{2};
-binFreq=varargin{3};
 tauLagMax=varargin{4};
 numSecciones=varargin{5};
 numPuntosSeccion=varargin{6};
@@ -52,20 +53,12 @@ base=varargin{7};
 numSubIntervalosError=varargin{8};
 tipoCorrelacion=varargin{9};
 
-% Es esto necesario? No parece que lo esté usando
-isOpen=matlabpool ('size')>0;
-if not(isOpen) %Inicializa matlabpool con el máximo numero de cores
-    numWorkers=feature('NumCores'); %Número de workers activos. 
-    if numWorkers>=8
-        numWorkers=8; %Para Matlab 2010b, 8 cores máximo.
-    end
-    disp (['Inicializando matlabpool con ' num2str(numWorkers) ' cores'])
-matlabpool ('open', numWorkers) 
-end
-
+% Es esto necesario? 
+inicializamatlabpool();
 
 isScanning = logical(size(photonArrivalTimes,2)-3); %isScanning es true si se trata de scanning FCS; sino, false
 if isScanning
+    binLines=varargin{3};
     imgBin=varargin{10};
     lineSync=varargin{11};
     indLinesLS=varargin{12};
@@ -77,24 +70,21 @@ if isScanning
     channelsCol=6;
     
 else
+    binFreq=varargin{3};
+
     macroTimeCol=1;
     microTimeCol=2;
     channelsCol=3;
 end
 
 numCanales=numel(unique(photonArrivalTimes(:, channelsCol)));
-deltaTBin=1/binFreq;
 
 if isScanning
-    multiploLineas=2; %Es el binning de 2 líneas; equivalente a binFreq. Tiene que salir de binFreq
-    [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, multiploLineas); % Binning temporal de imgBIN, en múltiplos de línea de la imagen
+    [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
+    binFreq=1/deltaTBin;
     
 else %isSCanningFCS==0 -  Esto es FCS puntual
-    FCSDataALINcorregido=0;
-    imgDecode=0;
-    imgROI=0;
-    imgALIN=0;
-    tPromedioLS=0;
+
     switch numCanales
         case 1
             t0=photonArrivalTimes(1, macroTimeCol)+photonArrivalTimes(1, microTimeCol); %pixel de referencia para binning (1er photon)
@@ -115,7 +105,7 @@ Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSec
 tData=(1:size(FCSintervalos, 1))/binFreq;
 
 if isScanning
-    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, tData, imgROI, imgALIN};
+    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, tData, binFreq};
 else
     varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, tData};
 end

@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 28-Nov-2014 16:15:10
+% Last Modified by GUIDE v2.5 04-Dec-2014 15:02:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -61,13 +61,18 @@ variables.pathSave='';
 variables.S=[];
 
 set(handles.edit_acquisitionTime, 'String', '');
+set(handles.edit_t0, 'String', '');
+set(handles.edit_tf, 'String', '');
 set(handles.edit_intervals, 'String', '');
-set(handles.edit_binningFrequency, 'String', '100');
+set(handles.edit_binningFrequency, 'String', '');
 set(handles.edit_subIntervalsForUncertainty, 'String', '18');
 set(handles.edit_maximumTauLag, 'String', '10');
 set(handles.edit_sections, 'String', '3');
 set(handles.edit_base, 'String', '4');
 set(handles.edit_pointsPerSection, 'String', '20');
+set(handles.edit_binningFrequency, 'Enable', 'off') 
+set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
+
 
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
 
@@ -100,8 +105,8 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 uiresume (handles.figure1) %Permite que se ejecute vargout
 
 
-% --- Executes on button press in pushbutton_loadAnalysedFCSData.
-function pushbutton_loadAnalysedFCSData_Callback(hObject, eventdata, handles)
+% --- Executes on button press in pushbutton_loadCorrelationCurves.
+function pushbutton_loadCorrelationCurves_Callback(hObject, eventdata, handles)
 
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 [FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
@@ -143,40 +148,48 @@ set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
-% --- Executes on button press in pushbutton_analysis.
-function pushbutton_analysis_Callback(hObject, eventdata, handles)
+% --- Executes on button press in pushbutton_computeCorrelation.
+function pushbutton_computeCorrelation_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 if v.S.isScanning
     macroTimeCol=4;
     microTimeCol=5;
     channelsCol=6;
+    v.S.binLines=str2double(get(handles.edit_binningLines, 'String'));
+
 else
     macroTimeCol=1;
     microTimeCol=2;
     channelsCol=3;
+    v.S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String'));
+    
 end
     v.S.numIntervalos=str2double(get(handles.edit_intervals, 'String'));
-    v.S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String'));
     v.S.numSubIntervalosError=str2double(get(handles.edit_subIntervalsForUncertainty, 'String'));
     v.S.tauLagMax=str2double(get(handles.edit_maximumTauLag, 'String'))/1000;
     v.S.numSecciones=str2double(get(handles.edit_sections, 'String'));
     v.S.base=str2double(get(handles.edit_base, 'String'));
     v.S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
     v.S.tipoCorrelacion='auto';
-
-set (handles.figure1,'Pointer','watch')
-drawnow update
-if v.S.isScanning
-else
-    [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean]=...
-        FCS_analysis (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion);    
-end
-
-for n=1:v.S.numIntervalos
-    hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
-end
-hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
+    
+    set (handles.figure1,'Pointer','watch')
+    drawnow update
+    if v.S.isScanning
+        [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData, v.S.binFreq]=...
+            FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binLines, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion, ...
+            v.S.imgBin, v.S.lineSync, v.S.indLinesLS, v.S.indMaxCadaLinea, v.S.sigma2_5);
+        s=sprintf('%3.2f', v.S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo sólo desde el principio.
+        set (handles.edit_binningFrequency, 'String', s);
+    else
+        [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData]=...
+            FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion);
+    end
+    
+    for n=1:v.S.numIntervalos
+        hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
+    end
+    hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
@@ -371,10 +384,27 @@ if ischar(FileName)
         macroTimeCol=4;
         microTimeCol=5;
         channelsCol=6;
+
+        [v.S.imgBin, v.S.indLinesLS, v.S.indMaxCadaLinea, v.S.sigma2_5, v.S.timeInterval]=FCS_align(v.S.photonArrivalTimes, v.S.imgDecode, v.S.lineSync, v.S.pixelSync);
+        strT0=sprintf('%3.2f', v.S.timeInterval(1));
+        strTf=sprintf('%3.2f', v.S.timeInterval(2));
+        
+        set(handles.edit_t0, 'String', strT0);
+        set(handles.edit_tf, 'String', strTf);
+        set(handles.edit_binningFrequency, 'Enable', 'off', 'String', '') 
+        v.S.binLines=2;
+        set(handles.edit_binningLines, 'Enable', 'on', 'String', num2str(v.S.binLines)) 
+        v.S.binFreq=1400/v.S.binLines;
+        s=sprintf('%3.2f', v.S.binFreq/1000);
+        set (handles.edit_binningFrequency, 'String', s)
     else
         macroTimeCol=1;
         microTimeCol=2;
         channelsCol=3;
+        
+        set(handles.edit_binningFrequency, 'Enable', 'on', 'String', '100') 
+        set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
+
     end
     acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
     strAcqTime=sprintf('%3.2f', acqTime);
@@ -393,3 +423,109 @@ function pushbutton_saveAsASCII_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton_saveAsASCII (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in pushbutton_decodeRawData.
+function pushbutton_decodeRawData_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+[FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(FileName)
+    v.path=PathName;
+    v.S.fname=FileName;
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
+    set (handles.figure1, 'Name' , nombreFCSData)
+    
+    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.S.fname);
+     if v.S.isScanning
+        v.S.imgDecode=imgDecode;
+        v.S.frameSync=frameSync;
+        v.S.lineSync=lineSync;
+        v.S.pixelSync=pixelSync;
+    end
+end
+
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
+%
+% Para point FCS
+% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
+
+
+
+
+function edit_t0_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_t0 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_t0 as text
+%        str2double(get(hObject,'String')) returns contents of edit_t0 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_t0_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_t0 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit_tf_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_tf (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_tf as text
+%        str2double(get(hObject,'String')) returns contents of edit_tf as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_tf_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_tf (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit_binningLines_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); 
+
+if isfield (v.S, 'binLines')
+    valorAnterior=v.S.binLines;
+else
+    valorAnterior=str2double(get(handles.edit_binningLines, 'String'));
+end
+v.S.binLines=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+v.S.binFreq=1400/v.S.binLines;
+s=sprintf('%3.2f', v.S.binFreq/1000);
+set (handles.edit_binningFrequency, 'String', s)
+setappdata (handles.figure1, 'v', v);
+
+% --- Executes during object creation, after setting all properties.
+function edit_binningLines_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_binningLines (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

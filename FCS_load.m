@@ -1,12 +1,12 @@
 function  varargout=FCS_load(fname)
 
-% Carga y decodifica los datos FIFO de B&H para FCS
+% Carga y descodifica los datos FIFO de B&H para FCS
 %
 % Para scanning FCS
-%[photonArrivalTimes, imgDecode, frameSync, lineSync, pixelSync,  TACrange, TACgain, isScanning] = FCS_load(fname)
+%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
 %
 % Para point FCS
-% [photonArrivalTimes, TACrange, TACgain, isScanning]= FCS_load(fname)
+%[isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
 %
 % Al final el programa guarda un fname.mat con las variables relevantes
 %
@@ -50,9 +50,9 @@ isScanning=and (numel(imgDecode)>1, and(numel(frameSync)>1, and(numel(lineSync)>
 
 
 fname=[fname(1:end-4) '.mat'];
-disp (['Decode time: ' num2str(tdecode) ' s'])
+disp (['Decoding time: ' num2str(tdecode) ' s'])
 if isScanning
-    varargout={photonArrivalTimes, imgDecode, frameSync, lineSync, pixelSync, TACrange, TACgain, isScanning};
+    varargout={isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync};
 
     disp ('Scanning FCS experiment')
     disp (['Saving ' fname(1:end-4) '.mat'])
@@ -60,7 +60,12 @@ if isScanning
     disp ('OK')
 else
     photonArrivalTimes(:, 1:3)=[];
-    varargout={photonArrivalTimes, TACrange, TACgain, isScanning};
+    varargout={isScanning, photonArrivalTimes, TACrange, TACgain};
+    if nargout>4
+        for n=5:nargout
+            varargout{n}=[];
+        end
+    end
     disp ('Point FCS experiment')
     disp (['Saving ' fname])
     save (fname, 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
