@@ -25,6 +25,10 @@ function varargout = gui_anaFCS(varargin)
 % Last Modified by GUIDE v2.5 04-Dec-2014 15:02:26
 
 % Begin initialization code - DO NOT EDIT
+
+% jri 20Jan2015
+
+
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
                    'gui_Singleton',  gui_Singleton, ...
@@ -110,9 +114,9 @@ function pushbutton_loadCorrelationCurves_Callback(hObject, eventdata, handles)
 
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 [FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
-set (handles.figure1,'Pointer','watch')
-drawnow update
 if ischar(FileName)
+    set (handles.figure1,'Pointer','watch')
+    drawnow update
     v.path=PathName;
     v.S=load ([v.path FileName]);
     if v.S.isScanning
@@ -134,19 +138,17 @@ if ischar(FileName)
     set(handles.edit_sections, 'String', num2str(v.S.numSecciones));
     set(handles.edit_base, 'String', num2str(v.S.base));
     set(handles.edit_pointsPerSection, 'String', num2str(v.S.numPuntosSeccion));
+    for n=1:v.S.numIntervalos
+        hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
+    end
+    hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
+    
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
+    set (handles.figure1, 'Name' , nombreFCSData)
+    set (handles.figure1,'Pointer','arrow')
+    setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 end
-
-for n=1:v.S.numIntervalos
-    hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
-end
-hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
-
-pos=find(v.path=='\', 2, 'last');
-nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
-set (handles.figure1, 'Name' , nombreFCSData)
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
 
 % --- Executes on button press in pushbutton_computeCorrelation.
 function pushbutton_computeCorrelation_Callback(hObject, eventdata, handles)
@@ -222,10 +224,7 @@ function pushbutton_saveForPyCorrFit_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); 
 set (handles.figure1,'Pointer','watch')
 drawnow update
-g=FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq);
-disp (['Saving ' v.S.fname ' for PyCorrFit'])
-    save ([v.path v.S.fname(1:end-4) '_PyCFit.mat'], 'g')
-disp ('OK')
+FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname(1:end-4) '_PyCFit.mat']);
 set (handles.figure1,'Pointer','arrow')
 
 
@@ -381,6 +380,7 @@ if ischar(FileName)
     v.path=PathName;
     v.S=load ([v.path FileName]);
     if v.S.isScanning
+        disp ('Scanning FCS experiment')
         macroTimeCol=4;
         microTimeCol=5;
         channelsCol=6;
@@ -398,6 +398,7 @@ if ischar(FileName)
         s=sprintf('%3.2f', v.S.binFreq/1000);
         set (handles.edit_binningFrequency, 'String', s)
     else
+        disp ('Point FCS experiment')
         macroTimeCol=1;
         microTimeCol=2;
         channelsCol=3;
