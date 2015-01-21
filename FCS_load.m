@@ -1,6 +1,6 @@
 function  varargout=FCS_load(fname)
 
-% Carga y descodifica los datos FIFO de B&H para FCS
+% Carga, descodifica y guarda en un .mat los datos FIFO de B&H para FCS
 %
 % Para scanning FCS
 %[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)

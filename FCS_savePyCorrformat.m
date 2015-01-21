@@ -24,7 +24,9 @@ tdata=1000*(1:numData)*1/binFreq; %En ms!
 g.act=squeeze(Gintervalos(:, 1, 1))*1000;
 g.ac=squeeze(Gintervalos(:, 2, 1:end));
 
-disp (['Saving ' fileName ' for PyCorrFit'])
+pos=find(fileName=='\', 1, 'last');
+nombreFCSData=fileName(pos+1:end);
+disp (['Saving ' nombreFCSData ' for PyCorrFit'])
     save (fileName, 'g', '-v7')
 disp ('OK')
 

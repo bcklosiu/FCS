@@ -57,7 +57,7 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to gui_anaFCS (see VARARGIN)
 
 
-variables.anaFCS_version='27Nov14'; %Esta es la versión del código
+variables.anaFCS_version='21Jan15'; %Esta es la versión del código
 variables.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
 
 variables.path=pwd;
@@ -76,6 +76,7 @@ set(handles.edit_base, 'String', '4');
 set(handles.edit_pointsPerSection, 'String', '20');
 set(handles.edit_binningFrequency, 'Enable', 'off') 
 set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
+set (handles.radiobutton_all, 'Value', true)
 
 
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
@@ -145,7 +146,7 @@ if ischar(FileName)
     
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
-    set (handles.figure1, 'Name' , nombreFCSData)
+    set (handles.figure1, 'Name' , ['anaFCS - ' nombreFCSData])
     set (handles.figure1,'Pointer','arrow')
     setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 end
@@ -173,7 +174,14 @@ end
     v.S.numSecciones=str2double(get(handles.edit_sections, 'String'));
     v.S.base=str2double(get(handles.edit_base, 'String'));
     v.S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
-    v.S.tipoCorrelacion='auto';
+    v.S.tipoCorrelacion='todas';
+    if get (handles.radiobutton_auto, 'Value')
+        v.S.tipoCorrelacion='auto';
+    end
+    if get (handles.radiobutton_cross, 'Value')
+        v.S.tipoCorrelacion='auto';
+    end
+
     
     set (handles.figure1,'Pointer','watch')
     drawnow update
@@ -189,9 +197,10 @@ end
     end
     
     for n=1:v.S.numIntervalos
-        hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
+        %Cuidado si queremos representar sólo un canal
+        hinf(n)=FCS_representa (v.S.FCSintervalos(:,:,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion);
     end
-    hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
+    hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion);
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
@@ -410,6 +419,8 @@ if ischar(FileName)
     acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
     strAcqTime=sprintf('%3.2f', acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
+%    S=v.S;
+%    save ([v.path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
 end
 pos=find(v.path=='\', 2, 'last');
 nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
