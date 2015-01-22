@@ -42,6 +42,7 @@ function varargout=FCS_computecorrelation (varargin)
 % Basado en FCS_analisis_BH
 % ULS Sep2014
 % jri 25Nov14
+% jri 22Ene15 - Corrijo el deltaTbin, que faltaba para el point-FCS
 
 
 photonArrivalTimes=varargin{1};
@@ -97,6 +98,7 @@ else %isSCanningFCS==0 -  Esto es FCS puntual
             t0=min(t0channels);
     end
     FCSData=FCS_binning_FIFO_pixel1(photonArrivalTimes, binFreq, t0); %Binning temporal de FCSDataALINcorregido con los datos del Macro+micro times
+    deltaTBin=1/binFreq;
 end %end if isSCanningFCS
 
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
