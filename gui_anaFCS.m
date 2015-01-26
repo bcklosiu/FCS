@@ -119,6 +119,7 @@ if ischar(FileName)
     set (handles.figure1,'Pointer','watch')
     drawnow update
     v.path=PathName;
+    %v.S=load ([v.path FileName], 'Gintervalos', 'Gmean', 'numIntervalos', 'binFreq', ); 
     v.S=load ([v.path FileName]);
     if v.S.isScanning
         macroTimeCol=4;
@@ -129,8 +130,8 @@ if ischar(FileName)
         microTimeCol=2;
         channelsCol=3;
     end
-    acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
-    strAcqTime=sprintf('%3.2f', acqTime);
+    %acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
+    %strAcqTime=sprintf('%3.2f', v.S.acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
     set(handles.edit_intervals, 'String', num2str(v.S.numIntervalos));
     set(handles.edit_binningFrequency, 'String', num2str(v.S.binFreq/1E3));
@@ -185,6 +186,8 @@ end
     
     set (handles.figure1,'Pointer','watch')
     drawnow update
+    disp ('Computing correlation')
+    tic;
     if v.S.isScanning
         [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData, v.S.binFreq]=...
             FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binLines, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion, ...
@@ -195,7 +198,8 @@ end
         [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData]=...
             FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion);
     end
-    
+    tdecode=toc;
+    disp (['Correlation time: ' num2str(tdecode) ' s'])
     for n=1:v.S.numIntervalos
         %Cuidado si queremos representar sólo un canal
         hinf(n)=FCS_representa (v.S.FCSintervalos(:,:,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion);
@@ -233,7 +237,7 @@ function pushbutton_saveForPyCorrFit_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); 
 set (handles.figure1,'Pointer','watch')
 drawnow update
-FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname(1:end-4) '_PyCFit.mat']);
+FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname]);
 set (handles.figure1,'Pointer','arrow')
 
 
@@ -387,7 +391,8 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(FileName)
     v.path=PathName;
-    v.S=load ([v.path FileName]);
+    disp (['Loading ' FileName])
+    v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
     if v.S.isScanning
         disp ('Scanning FCS experiment')
         macroTimeCol=4;
@@ -416,14 +421,14 @@ if ischar(FileName)
         set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
 
     end
-    acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
-    strAcqTime=sprintf('%3.2f', acqTime);
+    v.S.acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
+    strAcqTime=sprintf('%3.2f', v.S.acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
 %    S=v.S;
 %    save ([v.path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
 end
 pos=find(v.path=='\', 2, 'last');
-nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
+nombreFCSData=['anaFCS - ...' v.path(pos:end) v.S.fname(1:end-4)];
 set (handles.figure1, 'Name' , nombreFCSData)
 
 set (handles.figure1,'Pointer','arrow')

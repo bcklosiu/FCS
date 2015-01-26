@@ -8,13 +8,15 @@ function dataBin=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0)
 %   binFreq - es la frecuencia que queremos aplicar al binning (en Hz)
 %   t0 - es el tiempo de referencia que se le resta a todos los canales
 % OUTPUT ARGUMENTS:
-%   dataBin - es la nueva matriz con la traza temporal y el binning aplicado
+%   dataBin(Fotones en el bin, canal) - es la nueva matriz con la traza temporal y el binning aplicado
 %
 % Modificado jri para incluir el microtime 11abr14
 % Modificado por Unai para calcular automáticamente el nº de canales
 %
-% jri - 26Nov14 - Considera que arrivalTimes de FCS puntual sólo tiene 3
-% columnas en vez de 6
+% jri - 26Nov14 - Considera que arrivalTimes de FCS puntual sólo tiene 3 columnas en vez de 6
+% jri - 23Jan15 - Convierto dataBin (FCSData) en uint16 en vez de double
+
+
 
 
 isScanning = logical(size(arrivalTimes,2)-3);
@@ -49,7 +51,7 @@ else
     dimDataBin=ceil(numfildataBin);
 end
 
-dataBin=zeros(dimDataBin, nrChannels);
+dataBin=zeros(dimDataBin, nrChannels, 'uint16');
 for d=1:nrChannels
     binHasta=numFotCh(d); %límite superior del for anidado
     for dd=1:binHasta
