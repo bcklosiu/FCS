@@ -14,7 +14,6 @@ function dataBin=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0)
 % Modificado por Unai para calcular automáticamente el nº de canales
 %
 % jri - 26Nov14 - Considera que arrivalTimes de FCS puntual sólo tiene 3 columnas en vez de 6
-% jri - 23Jan15 - Convierto dataBin (FCSData) en uint16 en vez de double
 
 
 
@@ -51,7 +50,7 @@ else
     dimDataBin=ceil(numfildataBin);
 end
 
-dataBin=zeros(dimDataBin, nrChannels, 'uint16');
+dataBin=zeros(dimDataBin, nrChannels);
 for d=1:nrChannels
     binHasta=numFotCh(d); %límite superior del for anidado
     for dd=1:binHasta

@@ -49,10 +49,10 @@ end
 
 imgALINsum=sum(imgALIN,1);
 options=optimset (optimset('lsqnonlin'), 'Display','final-detailed'); %Opciones de ajuste
-guess=[min(imgALINsum),max(imgALINsum)-min(imgALINsum),find(imgALINsum==max(imgALINsum)),1]; %Parámetros iniciales para el ajuste
+guess=[min(imgALINsum),max(imgALINsum)-min(imgALINsum), find(imgALINsum==max(imgALINsum)),1]; %Parámetros iniciales para el ajuste. Atención: las coordenadas de las las x son píxeles
 paramfit = lsqnonlin(@err_gauss, guess, [], [], options, 1:numel(imgALINsum), imgALINsum); %Ajuste por mínimos cuadrados de imgALINsum
 sigma2_5=round(2.5*paramfit(4));
-FWHM=2*sqrt(log(2))*paramfit(4);
+FWHM=2*sqrt(2*log(2))*paramfit(4);
 strFWHM=sprintf ('%3.2f', FWHM);
 disp (['FWHM= ' strFWHM ' pixels'])
 imgALIN_5sigma=imgALIN(:,find(imgALINsum==max(imgALINsum))-sigma2_5:find(imgALINsum==max(imgALINsum))+sigma2_5);

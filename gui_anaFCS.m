@@ -119,8 +119,8 @@ if ischar(FileName)
     set (handles.figure1,'Pointer','watch')
     drawnow update
     v.path=PathName;
-    %v.S=load ([v.path FileName], 'Gintervalos', 'Gmean', 'numIntervalos', 'binFreq', ); 
-    v.S=load ([v.path FileName]);
+    v.S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', ...
+        'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning', 'fname');
     if v.S.isScanning
         macroTimeCol=4;
         microTimeCol=5;
@@ -130,8 +130,11 @@ if ischar(FileName)
         microTimeCol=2;
         channelsCol=3;
     end
+    if not(isfield(v.S, 'acqTime'))
+        v.S.acqTime=0;
+    end
     %acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
-    %strAcqTime=sprintf('%3.2f', v.S.acqTime);
+    strAcqTime=sprintf('%3.2f', v.S.acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
     set(handles.edit_intervals, 'String', num2str(v.S.numIntervalos));
     set(handles.edit_binningFrequency, 'String', num2str(v.S.binFreq/1E3));
@@ -392,17 +395,18 @@ drawnow update
 if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
-    v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
+    v.S=load ([v.path FileName], 'isScanning');
     if v.S.isScanning
+        v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'fname', 'imgDecode', 'lineSync', 'pixelSync');
         disp ('Scanning FCS experiment')
         macroTimeCol=4;
         microTimeCol=5;
         channelsCol=6;
 
         [v.S.imgBin, v.S.indLinesLS, v.S.indMaxCadaLinea, v.S.sigma2_5, v.S.timeInterval]=FCS_align(v.S.photonArrivalTimes, v.S.imgDecode, v.S.lineSync, v.S.pixelSync);
+        
         strT0=sprintf('%3.2f', v.S.timeInterval(1));
         strTf=sprintf('%3.2f', v.S.timeInterval(2));
-        
         set(handles.edit_t0, 'String', strT0);
         set(handles.edit_tf, 'String', strTf);
         set(handles.edit_binningFrequency, 'Enable', 'off', 'String', '') 
@@ -412,6 +416,7 @@ if ischar(FileName)
         s=sprintf('%3.2f', v.S.binFreq/1000);
         set (handles.edit_binningFrequency, 'String', s)
     else
+        v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'fname');
         disp ('Point FCS experiment')
         macroTimeCol=1;
         microTimeCol=2;
@@ -426,10 +431,11 @@ if ischar(FileName)
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
 %    S=v.S;
 %    save ([v.path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
+
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['anaFCS - ...' v.path(pos:end) v.S.fname(1:end-4)];
+    set (handles.figure1, 'Name' , nombreFCSData)
 end
-pos=find(v.path=='\', 2, 'last');
-nombreFCSData=['anaFCS - ...' v.path(pos:end) v.S.fname(1:end-4)];
-set (handles.figure1, 'Name' , nombreFCSData)
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
