@@ -1,5 +1,6 @@
-function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion)
-% [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion);
+function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, tipocorrelacion)
+
+% [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, tipocorrelacion);
 % 
 % Devuelve el promedio de las trazas temporales y de autocorrelación indicadas en combinacion
 %   Mtotal es una matriz que contiene las trazas de autocorrelación y correlación cruzada de los intervalos. 
@@ -24,6 +25,8 @@ function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat,
 % etc.
 %
 % jri & GdlH (12nov10)
+% jri - 2Feb15 Quito deltat porque no lo usamos: [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion);
+
 
 
 Mtotal=double(Mtotal);

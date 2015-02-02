@@ -103,7 +103,8 @@ end %end if isSCanningFCS
 
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
 Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax, tipoCorrelacion);
-[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, deltaTBin, tipoCorrelacion);
+%[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, deltaTBin, tipoCorrelacion);
+[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, tipoCorrelacion);
 tData=(1:size(FCSintervalos, 1))/binFreq;
 
 if isScanning

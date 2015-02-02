@@ -1,14 +1,20 @@
-function varargout=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal)
+function varargout=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal, hfig)
 
 %
-% hinf=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal);
+% [hinf hsup hfig]=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal);
 % Representa el resultado de la correlación
 %   FCSdata es un vector columna o una matriz de dos columnas que contiene datos de la traza temporal de uno o dos canales, respectivamente.
 %   matrizG es una matriz que contiene los datos de la correlación (matrizFCS): la 1ª columna es el tiempo, la 2ª la ACF del canal 1, la 3ª su error, etc.
 %   deltaT=1/sampfreq (en s)
 %   tipoCorrelacion es una cadena de caracteres que indica que tipo de correlación calculará el programa ('auto', 'cross' o 'todas')
-%   canal es una variable opcional para distinguir entre el canal 1 y el canal 2
+%   canal es una variable para distinguir entre el canal 1 y el canal 2.
+%   Puede estar vacío: []. Si no hay handle, tampoco es necesario ponerlo
+%   hfig es el handle a la figura en la que lo representará. Si no se indica crea una figura nueva
 %   Si no hay argumentos de salida no devuelve nada
+%
+%  hinf es el handle a los ejes de la gráfica de la correlación (inferior)
+%  hsup es el handle a los ejes de la gráfica de la traza temporal (superior)
+%  hfig es el handle a la figura
 %
 % jri & GdlH - 12nov10
 % jri & GdlH - 01jun11
@@ -18,6 +24,7 @@ function varargout=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, ca
 % jri 1ago14 - Cambio la escala a ms (no sólo la leyenda)
 % jri 27Nov14 - Hago una función para calcular la traza y no tener que hacerlo de cada vez. 
 % jri 21Jan15 - Incluye que no sea necesario poner el canal en 'auto'
+% jri 2Feb15 - Incluye el número de figura
 
 tdata_k=matrizG(:,1)*1000; %Para poner la escala en ms
 G(:,1)=matrizG(:,2);
@@ -35,8 +42,13 @@ rojo = [197 22 56]/255;
 azul = [0 102 204]/255;
 negro = [50 50 50]/255;
 
+if nargin<6 %No hay handle a la figura, por tanto crea una nueva
+    hfig=figure;
+else
+    %set (0, 'CurrentFigure', hfig);
+    figure (hfig)
+end
 
-hfig=figure;
 hsup=subplot (2,1,1); %Representa las trazas
 hinf=subplot (2,1,2); % Representa la autocorrelacion
 
@@ -44,6 +56,8 @@ hinf=subplot (2,1,2); % Representa la autocorrelacion
 switch (tipoCorrelacion)
     case 'auto'
         if nargin<5 %No se ha indicado el canal que se quiere representar
+            canal =1;
+        elseif isempty(canal)
             canal =1;
         end
           set(hfig, 'CurrentAxes', hsup)
@@ -131,9 +145,16 @@ set (hLabel, 'FontName', 'Calibri', 'FontSize', 11)
 set (hLegend, 'FontName', 'Calibri', 'FontSize', 11)
 
 
-if nargout==1
+if nargout>0
     varargout(1)={hinf};
 end
+if nargout>1
+    varargout(2)={hsup};
+end
+if nargout>2
+    varargout(3)={hfig};
+end
+
 
 
 

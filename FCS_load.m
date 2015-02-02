@@ -55,8 +55,8 @@ if isScanning
     varargout={isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync};
 
     disp ('Scanning FCS experiment')
-    disp (['Saving ' fname(1:end-4) '.mat'])
-    save (fname, 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
+    disp (['Saving ' fname(1:end-8) '_raw.mat'])
+    save ([fname(1:end-8) '_raw.mat'], 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
     disp ('OK')
 else
     photonArrivalTimes(:, 1:3)=[];
@@ -67,7 +67,7 @@ else
         end
     end
     disp ('Point FCS experiment')
-    disp (['Saving ' fname])
-    save (fname, 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
+    disp (['Saving ' fname(1:end-8) '_raw.mat']])
+    save ([fname(1:end-8) '_raw.mat'], 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
 end
 disp ('OK')
