@@ -212,7 +212,7 @@ for dataAjuste=1:numDataSetsAjuste
     xdata=Gdata(:,1);
     ydata=Gdata(:,2);
     yerr=Gdata(:,3);
-    filasAllParam=1+(idxdatasets(dataAjuste)-1)*v.numparam:idxdatasets(dataAjuste)*v.numParam; %Las filas que contienen los parámetros del ajuste en allParam (y en paramTableAllDataSets)
+    filasAllParam=1+(idxdatasets(dataAjuste)-1)*v.numParam:idxdatasets(dataAjuste)*v.numParam; %Las filas que contienen los parámetros del ajuste en allParam (y en paramTableAllDataSets)
     filasParamTable=1+(dataAjuste-1)*v.numParam:(dataAjuste*v.numParam); 
     %Estos parámetros los coge directamente de la tabla, por si han cambiado
     paramFijo=cell2mat(paramTable(filasParamTable, 5));

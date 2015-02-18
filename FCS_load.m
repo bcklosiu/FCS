@@ -67,7 +67,7 @@ else
         end
     end
     disp ('Point FCS experiment')
-    disp (['Saving ' fname(1:end-8) '_raw.mat']])
+    disp (['Saving ' fname(1:end-8) '_raw.mat'])
     save ([fname(1:end-8) '_raw.mat'], 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
 end
 disp ('OK')
