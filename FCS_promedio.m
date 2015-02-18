@@ -25,7 +25,7 @@ function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, tipocor
 % etc.
 %
 % jri & GdlH (12nov10)
-% jri - 2Feb15 Quito deltat porque no lo usamos: [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion);
+% jri - 2Feb15 Quito deltat porque no lo usamos. Antes era: [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion);
 
 
 

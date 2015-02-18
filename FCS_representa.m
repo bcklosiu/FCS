@@ -1,10 +1,10 @@
-function varargout=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal, hfig)
+function varargout=FCS_representa (FCSdata, Gdata, deltaT, tipoCorrelacion, canal, hfig)
 
 %
-% [hinf hsup hfig]=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, canal);
+% [hinf hsup hfig]=FCS_representa (FCSdata, Gdata, tipoCorrelacion, canal);
 % Representa el resultado de la correlación
 %   FCSdata es un vector columna o una matriz de dos columnas que contiene datos de la traza temporal de uno o dos canales, respectivamente.
-%   matrizG es una matriz que contiene los datos de la correlación (matrizFCS): la 1ª columna es el tiempo, la 2ª la ACF del canal 1, la 3ª su error, etc.
+%   Gdata es una matriz que contiene los datos de la correlación (matrizFCS): la 1ª columna es el tiempo, la 2ª la ACF del canal 1, la 3ª su error, etc.
 %   deltaT=1/sampfreq (en s)
 %   tipoCorrelacion es una cadena de caracteres que indica que tipo de correlación calculará el programa ('auto', 'cross' o 'todas')
 %   canal es una variable para distinguir entre el canal 1 y el canal 2.
@@ -26,14 +26,14 @@ function varargout=FCS_representa (FCSdata, matrizG, deltaT, tipoCorrelacion, ca
 % jri 21Jan15 - Incluye que no sea necesario poner el canal en 'auto'
 % jri 2Feb15 - Incluye el número de figura
 
-tdata_k=matrizG(:,1)*1000; %Para poner la escala en ms
-G(:,1)=matrizG(:,2);
-SD (:,1)=matrizG(:,3);
-if size(matrizG, 2)>3
-    G(:,2)=matrizG(:,4);
-    SD (:,2)=matrizG(:,5);
-    G(:,3)=matrizG(:,6);
-    SD (:,3)=matrizG(:,7);
+tdata_k=Gdata(:,1)*1000; %Para poner la escala en ms
+G(:,1)=Gdata(:,2);
+SD (:,1)=Gdata(:,3);
+if size(Gdata, 2)>3
+    G(:,2)=Gdata(:,4);
+    SD (:,2)=Gdata(:,5);
+    G(:,3)=Gdata(:,6);
+    SD (:,3)=Gdata(:,7);
 end
 
 

@@ -1,4 +1,4 @@
-function [FCSTraza, tTraza, cpscanal, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
+function [FCSTraza, tTraza, cpscanal, FCSTrazaNorm, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
 %
 %[FCSTraza, tTraza, cpscanal, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
 %   FCS_calculabinstraza es un rebinning de la traza para representarla
@@ -20,6 +20,7 @@ binning=floor(binTime/deltaT); % Número de bins de FCSData en un bin temporal (b
 numPuntosTraza=floor(tplot/binTime); %Divide la traza en bins de duración binTime (en s) y calcula la media para cada uno de ellos
 
 FCSTraza=zeros(numPuntosTraza, numCanales);
+FCSTrazaNorm=zeros(numPuntosTraza, numCanales);
 tTraza=zeros(numPuntosTraza, 1);
 
 C_FCS_binning1(FCSTraza, FCSData, binning); %Este es el binning de Matlab que hizo Unai. Es equivalente a las tres líneas que siguen
@@ -32,6 +33,6 @@ tTraza=tTraza(:);
 cpscanal=round(sum(FCSData, 1)/max(tdatatemporal));
 meanFCStraza=mean(FCSTraza);
 for canal=1:numCanales
-    FCSTraza(:,canal)=FCSTraza(:,canal)/meanFCStraza(canal);
+    FCSTrazaNorm(:,canal)=FCSTraza(:,canal)/meanFCStraza(canal);
 end
 

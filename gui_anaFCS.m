@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 02-Feb-2015 11:47:40
+% Last Modified by GUIDE v2.5 04-Feb-2015 16:09:54
 
 % Begin initialization code - DO NOT EDIT
 
@@ -108,6 +108,7 @@ delete (hObject);
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
 %Para que esto funcione tiene que estar definido en las properties del GUI.
 %Sólo hay que hacer click en el botón de CloseRequestFcn
+
 uiresume (handles.figure1) %Permite que se ejecute vargout
 
 
@@ -156,18 +157,19 @@ if ischar(FileName)
         case 'todas'
             set (handles.radiobutton_all, 'Value', 1)
     end
+    
     for n=1:v.S.numIntervalos
-        [~, ~, v.h_intervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion); %Las ventana promedio va a ser la 500
-        set (v.h_intervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
+        [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
+        set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
     end
-%    set (v.h_intervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
-    [~, ~, v.h_promedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion); 
+    %    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
+    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
     promedioString='';
-    for n=1:numel(v.S.intervalosPromediados)-1
+    for n=1:numel(v.S.intervalosPromediados)
         promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
     end
-    promedioString=[promedioString num2str(v.S.intervalosPromediados(n+1))];
-    set (v.h_promedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+    promedioString=promedioString(1:end-2); %Le quito la última ', '
+    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
     
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
@@ -220,23 +222,24 @@ if v.S.isScanning
     set (handles.edit_binningFrequency, 'String', s);
 else
     [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData]=...
-        FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion);
+        FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion, 1);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
 v.S.intervalosPromediados=1:v.S.numIntervalos; %Al principio promediamos todos
-for n=1:v.S.numIntervalos
-    %Cuidado si queremos representar sólo un canal
-    hinf(n)=FCS_representa (v.S.FCSintervalos(:,:,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion);
-end
-[~, ~, v.h_promedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion);
 
+for n=1:v.S.numIntervalos
+    [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
+    set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
+end
+%    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
+[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
 promedioString='';
-for n=1:numel(v.S.intervalosPromediados)-1
+for n=1:numel(v.S.intervalosPromediados)
     promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
 end
-promedioString=[promedioString num2str(v.S.intervalosPromediados(n+1))];
-set (v.h_promedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+promedioString=promedioString(1:end-2); %Le quito la última ', '
+set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
@@ -247,10 +250,22 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 % --- Executes on button press in pushbutton_plotCorrelationCurves.
 function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+
 for n=1:v.S.numIntervalos
-    hinf(n)=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, 'auto', 1);
+    [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
+    set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
 end
-hinf(n+1)=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, 'auto', 1);
+%    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
+[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
+promedioString='';
+for n=1:numel(v.S.intervalosPromediados)
+    promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+end
+promedioString=promedioString(1:end-2); %Le quito la última ', '
+set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
 
 
 
@@ -624,14 +639,16 @@ answer=inputdlg('Average FCS curves: ', 'Average', 1);
 rangeString=answer{1};
 endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
 v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-[v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion);
-FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, [], v.h_promedio); 
+[v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion, 1);
+
+[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
 promedioString='';
-for n=1:numel(v.S.intervalosPromediados)-1
+for n=1:numel(v.S.intervalosPromediados)
     promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
 end
-promedioString=[promedioString num2str(v.S.intervalosPromediados(n+1))];
-set (v.h_promedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+promedioString=promedioString(1:end-2); %Le quito la última ', '
+set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+
 setappdata (handles.figure1, 'v', v);
 
 
@@ -651,3 +668,44 @@ close (h)
 % v=getappdata (handles.figure1, 'v'); %Recupera variables
 % v.S.intervalosPromediados(v.S.intervalosPromediados=1:v.S.numIntervalos;
 % setappdata (handles.figure1, 'v', v);
+
+
+% --- Executes on button press in pushbutton_fitIndividualCurves.
+function pushbutton_fitIndividualCurves_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+if v.S.isScanning
+    funStr='fitfcn_FCS_scanningTauD';
+else
+    funStr='fitfcn_FCS_3DTauD';
+end
+
+answer=inputdlg('Fit correlation curves: ', 'Choose curves ti fit', 1);
+rangeString=answer{1};
+endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+v.S.fittedCurves=pagerangeparser (rangeString, 1, endPage);
+for n=1:numel(v.S.fittedCurves)
+    dataFit(n)=mat2cell(v.S.Gintervalos(:,:,v.S.fittedCurves(n)));
+end
+[allParam chi2 dataSetSelection fittingFunction Gmodel]=gui_FCSfit(dataFit, funStr, [], []);
+
+
+setappdata (handles.figure1, 'v', v);
+
+
+% --- Executes on button press in pushbutton_fitAverage.
+function pushbutton_fitAverage_Callback(hObject, eventdata, handles)
+
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+if v.S.isScanning
+    funStr='fitfcn_FCS_scanningTauD';
+else
+    funStr='fitfcn_FCS_3DTauD';
+end
+[v.h_corrPromedio, v.h_resPromedio, ~, v.h_figPromedio]=FCS_representa_ajuste (v.S.FCSmean, v.S.Gmean, [], 1/v.S.binFreq, v.S.tipoCorrelacion, 1, v.h_figPromedio);
+
+[allParam chi2 dataSetSelection fittingFunction Gmodel]=gui_FCSfit({v.S.Gmean}, funStr, v.h_corrPromedio, v.h_resPromedio);
+
+setappdata (handles.figure1, 'v', v);
+
