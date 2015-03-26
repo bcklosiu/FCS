@@ -533,8 +533,7 @@ if ischar(FileName)
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
-    
-    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.S.fname);
+    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load([v.path v.S.fname]);
      if v.S.isScanning
         v.S.imgDecode=imgDecode;
         v.S.frameSync=frameSync;

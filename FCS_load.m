@@ -41,6 +41,7 @@ if isOpen==0 %Inicializa matlabpool con el máximo numero de cores
 end
 
 
+disp (['Decoding ' fname])
 [fblock, TACrange, TACgain]=loadFIFO(fname); %Carga en la RAM (como enteros de 32 bits), cada evento del archivo FIFO. Calcula TAC gain y TAC range.
 tic;
 [photonArrivalTimes, imgDecode, frameSync, lineSync, pixelSync]= decodeFIFObinary_parallel (fblock, TACrange, TACgain); %Decodifica los eventos de BH
@@ -55,8 +56,8 @@ if isScanning
     varargout={isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync};
 
     disp ('Scanning FCS experiment')
-    disp (['Saving ' fname(1:end-8) '_raw.mat'])
-    save ([fname(1:end-8) '_raw.mat'], 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
+    disp (['Saving ' fname(1:end-4) '_raw.mat'])
+    save ([fname(1:end-4) '_raw.mat'], 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
     disp ('OK')
 else
     photonArrivalTimes(:, 1:3)=[];
@@ -67,7 +68,7 @@ else
         end
     end
     disp ('Point FCS experiment')
-    disp (['Saving ' fname(1:end-8) '_raw.mat'])
-    save ([fname(1:end-8) '_raw.mat'], 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
+    disp (['Saving ' fname(1:end-4) '_raw.mat'])
+    save ([fname(1:end-4) '_raw.mat'], 'photonArrivalTimes', 'TACrange', 'TACgain', 'fname', 'isScanning')
 end
 disp ('OK')
