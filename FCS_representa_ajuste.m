@@ -22,6 +22,7 @@ function varargout=FCS_representa_ajuste (FCSdata, Gdata, Gmodel, deltaT, tipoCo
 % pantalla.
 % jri 1ago14 - Comentarios en inglés y fondo blanco
 % jri 1ago14 - Cambio la escala a ms (no sólo la leyenda)
+% jri 15Mar26 - La traza ya no está normalizada, sino en 10^2 CPS
 
 %También podría ser varargout=FCS_representa_ajuste (FCSTraza, tTraza, cpscanal, Gdata, tipoCorrelacion, Gmodel, canal, hfig)
 
@@ -49,8 +50,8 @@ if size(Gdata,2)>3
     SD (:,3)=Gdata(:,7);
 end
 
-[FCSTraza, tTraza, cpscanal, FCSTrazaNorm]=FCS_calculabinstraza(FCSdata, deltaT, 0.005);
-FCSTraza=FCSTrazaNorm;
+[FCSTraza, tTraza, cpscanal, FCSTrazaNorm]=FCS_calculabinstraza(FCSdata, deltaT, 0.01);
+linePos=mean(FCSTraza);
 
 
 htrace=subplot (3,1,1); %Representa las trazas
@@ -66,14 +67,14 @@ switch (tipoCorrelacion)
             hLegend(1)=legend (['Ch 1(CPS): ', num2str(cpscanal(1))]);
             axis (htrace, [min(tTraza)*0.95 max(tTraza)*1.025 min(FCSTraza(:))*0.99 max(FCSTraza(:))*1.01]) %Cambia los límites de los ejes
             v=axis (htrace);
-            line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 0
+            line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 0
             
         else
             htemp=plot (tTraza, FCSTraza(:,1), 'Color', rojo, 'Linewidth', 2);
             hLegend(1)=legend (['Ch 2: ', num2str(cpscanal(1))]);
             axis (htrace, [min(tTraza)*0.75 max(tTraza)*1.25 min(FCSTraza(:))*0.99 max(FCSTraza(:))*1.01]) %Cambia los límites de los ejes
             v=axis (htrace);
-            line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
+            line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
             
         end
         
@@ -112,7 +113,7 @@ switch (tipoCorrelacion)
         hLegend(1)=legend (['Ch 1: ', num2str(cpscanal(1))], ['Ch 2: ', num2str(cpscanal(2))]);
         axis (htrace, [min(tTraza)*0.75 max(tTraza)*1.25 min(FCSTraza(:))*0.99 max(FCSTraza(:))*1.01]) %Cambia los límites de los ejes
         v=axis (htrace);
-        line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
+        line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
         set(hfig, 'CurrentAxes', hcorr)
         if strcmpi (tipoCorrelacion, 'todas')
             hold on
@@ -169,7 +170,8 @@ axis (hres, [tdata_k(1)-0.25*tdata_k(1) tdata_k(end)+0.5*tdata_k(end) v(3) v(4)]
 set (hfig, 'Color', [1 1 1])
 set ([htrace hcorr hres], 'Color', 'none', 'FontName', 'Calibri', 'FontSize', 11, 'XColor', negro, 'YColor', negro, 'LineWidth', 1.5)
 hLabel(1,1)=xlabel (htrace, 'Time (s)');
-hLabel(1,2)=ylabel (htrace, {'Channel-averaged'; 'normalised counts'});
+%hLabel(1,2)=ylabel (htrace, {'Channel-averaged'; 'normalised counts'});
+hLabel(1,2)=ylabel (htrace, 'Counts (10^2 CPS)');
 set ([hcorr hres], 'Box', 'on', 'XScale', 'log', 'XGrid', 'on', 'YGrid', 'on')
 hLabel(2,1)=xlabel (hcorr, '\tau (ms)');
 hLabel(2,2)=ylabel (hcorr, 'G (\tau)');

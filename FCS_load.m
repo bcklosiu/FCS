@@ -29,6 +29,8 @@ function  varargout=FCS_load(fname)
 %
 % ULS...
 % jri - 26Nov14
+% jri - 26Mar15 - Corrijo los errores al cargar datos de scanning FCS
+
 
 isOpen=matlabpool ('size')>0;
 if isOpen==0 %Inicializa matlabpool con el máximo numero de cores
@@ -58,7 +60,6 @@ if isScanning
     disp ('Scanning FCS experiment')
     disp (['Saving ' fname(1:end-4) '_raw.mat'])
     save ([fname(1:end-4) '_raw.mat'], 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
-    disp ('OK')
 else
     photonArrivalTimes(:, 1:3)=[];
     varargout={isScanning, photonArrivalTimes, TACrange, TACgain};

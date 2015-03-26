@@ -25,6 +25,8 @@ function varargout=FCS_representa (FCSdata, Gdata, deltaT, tipoCorrelacion, cana
 % jri 27Nov14 - Hago una función para calcular la traza y no tener que hacerlo de cada vez. 
 % jri 21Jan15 - Incluye que no sea necesario poner el canal en 'auto'
 % jri 2Feb15 - Incluye el número de figura
+% jri 26Mar15 - Dibuja CPS en 10^2 CPS (bins de 0.01s). Cambia la línea
+% para que pase por el promedio, en vez de por 1
 
 tdata_k=Gdata(:,1)*1000; %Para poner la escala en ms
 G(:,1)=Gdata(:,2);
@@ -52,7 +54,8 @@ end
 hsup=subplot (2,1,1); %Representa las trazas
 hinf=subplot (2,1,2); % Representa la autocorrelacion
 
-[FCSTraza, tTraza, cpscanal]=FCS_calculabinstraza(FCSdata, deltaT, 0.02);
+[FCSTraza, tTraza, cpscanal]=FCS_calculabinstraza(FCSdata, deltaT, 0.01);
+linePos=mean(FCSTraza);
 switch (tipoCorrelacion)
     case 'auto'
         if nargin<5 %No se ha indicado el canal que se quiere representar
@@ -65,7 +68,7 @@ switch (tipoCorrelacion)
             htemp=plot (tTraza, FCSTraza(:,1), 'Color', verde, 'Linewidth', 1.5);
             hLegend(1)=legend (['Ch 1: ', num2str(cpscanal(1))]);
             v=axis (hsup);
-            line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':')
+            line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':')
             axis (hsup, [v(1) v(2) min(min(FCSTraza))*0.99 max(max(FCSTraza))*1.01])
             
             hold off
@@ -75,7 +78,7 @@ switch (tipoCorrelacion)
             htemp=plot (tTraza, FCSTraza(:,2), 'Color', rojo, 'Linewidth', 1.5);
             hLegend(1)=legend (['Ch 2: ', num2str(cpscanal(2))]);
             v=axis (hsup);
-            line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':')
+            line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':')
             axis (hsup, [v(1) v(2) min(min(FCSTraza))*0.99 max(max(FCSTraza))*1.01])
             
             hold off
@@ -91,7 +94,7 @@ switch (tipoCorrelacion)
         hLegend(1)=legend (['Ch 1: ', num2str(cpscanal(1))], ['Ch 2: ', num2str(cpscanal(2))]);
         
         v=axis (hsup);
-        line ([v(1) v(2)], [1 1], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
+        line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
         %     line ([v(1) v(2)], [meangkmean(1)+sqrt(meangkmean(1)) meangkmean(1)+sqrt(meangkmean(1))]/meangkmean(1), 'Color', verde, 'LineStyle', ':') %Pinta una línea que indica la desv. est. poissoniana
         %     line ([v(1) v(2)], [meangkmean(1)-sqrt(meangkmean(1)) meangkmean(1)-sqrt(meangkmean(1))]/meangkmean(1), 'Color', verde, 'LineStyle', ':') %Pinta una línea que indica la desv. est. poissoniana
         %     line ([v(1) v(2)], [meangkmean(2)+sqrt(meangkmean(2)) meangkmean(2)+sqrt(meangkmean(2))]/meangkmean(2), 'Color', rojo, 'LineStyle', ':') %Pinta una línea que indica la desv. est. poissoniana
@@ -136,7 +139,8 @@ set (hfig, 'Color', [1 1 1])
 set ([hsup hinf], 'Color', 'none', 'FontName', 'Calibri', 'FontSize', 11)
 
 hLabel(1,1)=xlabel (hsup, 'Time (s)');
-hLabel(1,2)=ylabel (hsup, {'Channel-averaged'; 'normalised counts'});
+%hLabel(1,2)=ylabel (hsup, {'Channel-averaged'; 'normalised counts'});
+hLabel(1,2)=ylabel (hsup, {'Counts (10^2 CPS)'});
 
 set (hinf, 'XScale', 'log')
 hLabel(2,1)=xlabel (hinf, '\tau (ms)');

@@ -58,7 +58,7 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior. 
 
-variables.anaFCS_version='21Jan15'; %Esta es la versión del código
+variables.anaFCS_version='26Mar15'; %Esta es la versión del código
 variables.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
 
 variables.path=pwd;
@@ -77,7 +77,7 @@ set(handles.edit_base, 'String', '4');
 set(handles.edit_pointsPerSection, 'String', '20');
 set(handles.edit_binningFrequency, 'Enable', 'off') 
 set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
-set (handles.radiobutton_all, 'Value', true)
+set(handles.radiobutton_auto, 'Value', true)
 
 
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
@@ -459,7 +459,7 @@ if ischar(FileName)
         set(handles.edit_t0, 'String', strT0);
         set(handles.edit_tf, 'String', strTf);
         set(handles.edit_binningFrequency, 'Enable', 'off', 'String', '') 
-        v.S.binLines=2;
+        v.S.binLines=1;
         set(handles.edit_binningLines, 'Enable', 'on', 'String', num2str(v.S.binLines)) 
         v.S.binFreq=1400/v.S.binLines;
         s=sprintf('%3.2f', v.S.binFreq/1000);
