@@ -14,11 +14,11 @@ function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync,
 
 imgCut=imgNOalineada(indLineasLS,:,:);
 numChannels=size(imgCut,3);
-limitesImg5sigma=[indMaxCadaLinea-sigma2_5,indMaxCadaLinea+sigma2_5];
+limitesImg5sigma= [indMaxCadaLinea-sigma2_5, indMaxCadaLinea+sigma2_5];
 numLineas=(size(imgCut,1));
 numPixeles=(size(imgCut,2));
-limitesImg5sigma(limitesImg5sigma(:,1)<1,1)=1; %Busca los límites de la imagen menores que 1
-limitesImg5sigma(limitesImg5sigma(:,2)>numPixeles,2)=numPixeles; %Busca los límites de la imagen mayores que 1
+limitesImg5sigma(limitesImg5sigma(:,1)<1, 1)=1; %Busca los límites de la imagen menores que 1
+limitesImg5sigma(limitesImg5sigma(:,2)>numPixeles, 2)=numPixeles; %Busca los límites de la imagen mayores que 1
 lineSynccut=lineSync(indLineasLS,:);
 
 % Cálculo de la frecuencia de binning (binFreq)
@@ -49,7 +49,7 @@ if not(restoWorkers==0) %el nº de líneas debe ser divisible por el nº de cores p
 end
 parIndLineasIMG=reshape(indLineasIMG,[],numWorkers);
 restoLineas=parIndLineasIMG(end)+multiploLineas-1-numLineas; %Nº de lineas restantes para poder paralelizar
-parLimitesImg5sigma=[limitesImg5sigma;ones(restoLineas,2)];
+parLimitesImg5sigma=[limitesImg5sigma; ones(restoLineas,2)];
 parImgCut=[imgCut;zeros(restoLineas,size(imgCut,2),numChannels)];
 parNumLineas=size(parIndLineasIMG,1);
 FCSDataBin=zeros(parNumLineas*numWorkers,numChannels);

@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 04-Feb-2015 16:09:54
+% Last Modified by GUIDE v2.5 27-Mar-2015 12:41:24
 
 % Begin initialization code - DO NOT EDIT
 
@@ -77,6 +77,7 @@ set(handles.edit_base, 'String', '4');
 set(handles.edit_pointsPerSection, 'String', '20');
 set(handles.edit_binningFrequency, 'Enable', 'off') 
 set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
+set(handles.edit_channel, 'String', '1');
 set(handles.radiobutton_auto, 'Value', true)
 
 
@@ -122,7 +123,8 @@ if ischar(FileName)
     drawnow update
     v.path=PathName;
     v.S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'tipoCorrelacion',...
-        'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning', 'fname');
+        'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning');
+    v.fname=[v.path FileName];
     if v.S.isScanning
         macroTimeCol=4;
         microTimeCol=5;
@@ -172,7 +174,7 @@ if ischar(FileName)
     set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
     
     pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
+    nombreFCSData=['...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , ['anaFCS - ' nombreFCSData])
     set (handles.figure1,'Pointer','arrow')
     setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
@@ -204,6 +206,7 @@ v.S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
 v.S.tipoCorrelacion='todas';
 if get (handles.radiobutton_auto, 'Value')
     v.S.tipoCorrelacion='auto';
+    v.S.channel=str2double(get(handles.edit_channel, 'String'));
 end
 if get (handles.radiobutton_cross, 'Value')
     v.S.tipoCorrelacion='auto';
@@ -276,8 +279,8 @@ v=getappdata (handles.figure1, 'v'); %Recupera variables
 S=v.S;
 set (handles.figure1,'Pointer','watch')
 drawnow update
-disp (['Saving FCS analysis of ' v.S.fname])
-    save ([v.path v.S.fname], '-struct', 'S', '-append')
+disp (['Saving FCS analysis of ' v.fname])
+    save (v.fname, '-struct', 'S', '-append')
 disp ('OK')
 set (handles.figure1,'Pointer','arrow')
 
@@ -445,8 +448,9 @@ if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
     v.S=load ([v.path FileName], 'isScanning');
+    v.fname=[v.path FileName];
     if v.S.isScanning
-        v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'fname', 'imgDecode', 'lineSync', 'pixelSync');
+        v.S=load (v.fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'imgDecode', 'lineSync', 'pixelSync');
         disp ('Scanning FCS experiment')
         macroTimeCol=4;
         microTimeCol=5;
@@ -464,8 +468,15 @@ if ischar(FileName)
         v.S.binFreq=1400/v.S.binLines;
         s=sprintf('%3.2f', v.S.binFreq/1000);
         set (handles.edit_binningFrequency, 'String', s)
+        v.S.tauLagMax=5;
+        set(handles.edit_maximumTauLag, 'String', num2str(v.S.tauLagMax/1E-3));
+        v.S.numSecciones=2;
+        set(handles.edit_sections, 'String', num2str(v.S.numSecciones));
+        
+        
+        
     else
-        v.S=load ([v.path FileName], 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'fname');
+        v.S=load (v.fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
         disp ('Point FCS experiment')
         macroTimeCol=1;
         microTimeCol=2;
@@ -482,7 +493,7 @@ if ischar(FileName)
 %    save ([v.path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
 
     pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['anaFCS - ...' v.path(pos:end) v.S.fname(1:end-4)];
+    nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
 end
 
@@ -495,7 +506,7 @@ function pushbutton_saveAsASCII_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); 
 set (handles.figure1,'Pointer','watch')
 drawnow update
-fileName=[v.path v.S.fname];
+fileName=v.fname;
 fileName=[fileName(1:end-4) '.dat'];
 pos=find(fileName=='\', 1, 'last');
 if isempty(pos)
@@ -529,11 +540,11 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(FileName)
     v.path=PathName;
-    v.S.fname=FileName;
+    v.S.rawFile=[PathName FileName];
     pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.path(pos:end) v.S.fname(1:end-4)];
+    nombreFCSData=['...' v.S.rawFile(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
-    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load([v.path v.S.fname]);
+    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.S.rawFile);
      if v.S.isScanning
         v.S.imgDecode=imgDecode;
         v.S.frameSync=frameSync;
@@ -638,9 +649,10 @@ answer=inputdlg('Average FCS curves: ', 'Average', 1);
 rangeString=answer{1};
 endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
 v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-[v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion, 1);
 
-[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
+[v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion);
+
+[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion);
 promedioString='';
 for n=1:numel(v.S.intervalosPromediados)
     promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
@@ -708,3 +720,26 @@ end
 
 setappdata (handles.figure1, 'v', v);
 
+
+
+
+function edit_channel_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_channel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_channel as text
+%        str2double(get(hObject,'String')) returns contents of edit_channel as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_channel_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_channel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

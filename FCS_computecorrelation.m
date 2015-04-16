@@ -83,7 +83,7 @@ numCanales=numel(unique(photonArrivalTimes(:, channelsCol)));
 if isScanning
     [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
     binFreq=1/deltaTBin;
-    
+
 else %isSCanningFCS==0 -  Esto es FCS puntual
 
     switch numCanales

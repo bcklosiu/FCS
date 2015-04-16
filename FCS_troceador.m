@@ -10,8 +10,9 @@ function FCS_intervalo = FCS_troceador(FCSdata, intervalos)
 %
 % gdh & jri - 22-7-2010
 % gdh - 10may11 (Introducir la función class para determinar la precisión de FCSdata)
+
 numdatos=size(FCSdata,1);
-numcanales=size (FCSdata, 2);
+numcanales=size(FCSdata, 2);
 fprintf (' Número de canales: %d \n', numcanales)
 
 %Ahora lo hago en trozos
