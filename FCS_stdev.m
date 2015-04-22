@@ -1,7 +1,7 @@
-function M= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax)
+function M= FCS_stdev (FCSData, numSubIntervalosError, deltaT, numSecciones, numPuntos, base, tLagMax)
 
 %
-%  M= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax);
+%  M= FCS_stdev (FCSData, numSubIntervalosError, deltaT, numSecciones, numPuntos, base, tLagMax);
 %
 %   Este programa devuelve la función de correlación G y su desviacion estándar SD calculada por el tercer metodo descrito en el articulo de Wohland
 %   et al. de 2001. Asimismo también devuelve los valores del tiempo de la curva de correlación, tdatacorr.
@@ -12,7 +12,7 @@ function M= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, 
 %   datos de la traza temporal de uno o dos canales, respectivamente.
 %   tdatatraza es un vector columna con los datos temporales correspondientes
 %   a FCSData.
-%   numIntervalos es el numero de intervalos en que queremos dividir la traza temporal para calcular la desviación estándar.
+%   numSubIntervalosError es el numero de intervalos en que queremos dividir la traza temporal para calcular la desviación estándar.
 %   deltaT=1/sampfreq
 %   numSecciones es el numero de secciones (Parámetros Multi-tau)
 %   numPuntos es el numero de puntos por seccion (Parámetros Multi-tau)
@@ -30,7 +30,7 @@ numData=size(FCSData,1);
 numCanales=size(FCSData, 2); %Si hay dos canales calcula también la correlación cruzada 
 
 
-tdatatemporal=linspace (deltaT, numData*deltaT, numData)';
+tdatatemporal=linspace (deltaT, numData*deltaT, numData);
 cpscanal=round(sum(FCSData,1)/max(tdatatemporal));
 [G tdatacorr]= FCS_multitau  (FCSData, deltaT, numSecciones, numPuntos, base, tLagMax);
 %Gt_inf=sum(G(end-4:end,:))/5;
@@ -39,15 +39,17 @@ Gt_0=1; %Cambiado el 17 de Enero para evitar la normalización
 
 
 %Ahora lo hago en trozos y calculo las correlaciones
-intervalo=floor(numData./numIntervalos);
+intervalo=floor(numData./numSubIntervalosError);
 
-tdatatemporal_k=linspace (deltaT, intervalo*deltaT, intervalo)';
-%G_inf=zeros(size(G,3), numIntervalos,1);
-%G_0=zeros(size(G,3), numIntervalos);
-for k=1:numIntervalos
+numPuntosCorrelacion=size(G, 1);
+G_k=zeros(numSubIntervalosError, numPuntosCorrelacion, size(G, 2));
+%G_inf=zeros(size(G,3), numSubIntervalosError,1);
+%G_0=zeros(size(G,3), numSubIntervalosError);
+
+for k=1:numSubIntervalosError
     FCS_intervalos=FCSData((k-1)*intervalo+1:k*intervalo,:);
         %cpscanal_k(:,k)=round(sum(FCS_intervalos,1)/max(tdatatemporal_k));
-    [G_k(k,:,:) tdata_k(:,1)]= FCS_multitau (FCS_intervalos, deltaT, numSecciones, numPuntos, base, tLagMax);
+    G_k(k,:,:)= FCS_multitau (FCS_intervalos, deltaT, numSecciones, numPuntos, base, tLagMax);
     %G_inf(:,k)=squeeze(sum(G_k(k, end-4:end, :))/5);
 %    G_0(:,k)=squeeze(sum(G_k(k, 1:5, :))/5);
     G_0=1; %Cambiado el 17 de Enero para evitar la normalización
@@ -55,24 +57,23 @@ for k=1:numIntervalos
 end
 
 
-corr_size=size(G_k,2);
 %Y calculo la media de las correlaciones
-g_norm= zeros(corr_size,size(G_k,3));
-SD_norm_p= zeros(corr_size,size(G_k,3));
+g_norm= zeros(numPuntosCorrelacion, size(G_k,3));
+SD_norm_p= zeros(numPuntosCorrelacion, size(G_k,3));
 G_0=G_0';
 %G_inf=G_inf';
 
-for m=1:corr_size
-    %g_norm(m,:)= sum((squeeze(G_k(:,m,:))-G_inf)./(G_0-G_inf))/numIntervalos;
-    g_norm(m,:)= sum(squeeze(G_k(:,m,:))./G_0)/numIntervalos;  %Prescindimos de incluir Ginfinito porque en nuestro modelo de ajuste suponemos que es igual a cero
+for m=1:numPuntosCorrelacion
+    %g_norm(m,:)= sum((squeeze(G_k(:,m,:))-G_inf)./(G_0-G_inf))/numSubIntervalosError;
+    g_norm(m,:)= sum(squeeze(G_k(:,m,:))./G_0)/numSubIntervalosError;  %Prescindimos de incluir Ginfinito porque en nuestro modelo de ajuste suponemos que es igual a cero
     for ll=1:size(G_k,3)
-        %SD_norm_p(m,ll)=sqrt(sum(((squeeze(G_k(1:numIntervalos,m,ll))-G_inf(:,ll))./(G_0(:,ll)-G_inf(:,ll))-g_norm(m,ll)).^2)/(numIntervalos-1));
-        SD_norm_p(m,ll)=sqrt(sum((squeeze(G_k(1:numIntervalos, m,ll))./G_0-g_norm(m,ll)).^2)/(numIntervalos-1));
+        %SD_norm_p(m,ll)=sqrt(sum(((squeeze(G_k(1:numSubIntervalosError,m,ll))-G_inf(:,ll))./(G_0(:,ll)-G_inf(:,ll))-g_norm(m,ll)).^2)/(numSubIntervalosError-1));
+        SD_norm_p(m,ll)=sqrt(sum((squeeze(G_k(1:numSubIntervalosError, m,ll))./G_0-g_norm(m,ll)).^2)/(numSubIntervalosError-1));
     end
         
 end
 
-SD_norm=SD_norm_p/sqrt(numIntervalos);
+SD_norm=SD_norm_p/sqrt(numSubIntervalosError);
 SD=zeros(size(SD_norm));
 for m=1:size(G_k, 3)
     %SD(:,ll)=SD_norm(:,ll)*(Gt_0(ll)-Gt_inf(ll));

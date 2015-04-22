@@ -28,12 +28,11 @@ function M= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaT, numSeccion
 numCanales=size (FCSintervalos, 2);
 numIntervalos=size (FCSintervalos, 3);
 
-
 %Calculo el número de puntos que tendrá la correlación al final, quitando los que se repiten
 [~ , ~ , ~, numPuntosCorrFinal]=FCS_calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tauLagMax);
-
 M=zeros(numPuntosCorrFinal, 1+numCanales*2, numIntervalos);
 
+%Bucle que hay que paralelizar
 for intervalo=1:numIntervalos
     M (:, :, intervalo)= FCS_stdev(FCSintervalos(:,:,intervalo), numSubIntervalosError, deltaT, numSecciones, numPuntosSeccion, base, tauLagMax);
 end
