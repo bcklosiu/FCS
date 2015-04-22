@@ -22,60 +22,22 @@ function [G tdata]= FCS_multitau (FCSData, deltaT, numSecciones, numPuntosSeccio
 
 
 numData=size(FCSData, 1);
-numSecciones=numSecciones+1; %Le ponemos una sección extra para añadir la cola logarítimca
 
 %Calcula todos los puntos de cada sección en los que hará la correlación
 %para evitar los puntos repetidos por sección
-[tdataTodos matrizIndices indicesNOrepe]=calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tLagMax);
+[tdataTodos matrizIndices indicesNOrepe numPuntosCorrFinal]=FCS_calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tLagMax);
 %Hace la correlación
-[G tdata]=correlacionSeccion (FCSData, deltaT, numSecciones, numPuntosSeccion, base, numData, matrizIndices, indicesNOrepe, tdataTodos);
-
-
-function [tdata matrizIndices indicesNOrepe]=calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tLagMax)
-%Devuelve una matriz de índices no repetidos para luego calcular la correlación sólo en esos puntos
-
-%Esto para las primeras numSecciones-1
-
-tdata=zeros (numPuntosSeccion, numSecciones);
-matrizIndices=zeros (numPuntosSeccion, numSecciones);
-indicesNOrepe=false(size(tdata));
-
-vectorIndices=1:numPuntosSeccion;
-for seccion=1:numSecciones-1 %Hace una correlación por cada sección
-    multiBase=base^(seccion-1);
-    tdata(:, seccion)=calculatdata (vectorIndices, multiBase, deltaT);
-    matrizIndices(:, seccion)=vectorIndices;
-end
-
-%Última sección:
-%Calcula los puntos de la última sección expandiendo logarítmicamente la base de la sección anterior,
-%puesto que la última sección la hemos añadido para expandir el final de la correlación logarítmicamente
-%multiBase tiene el mismo valor que la última sección del bucle anterior.
-numPuntos_ultimaSeccion=floor(tLagMax/(deltaT*multiBase)); %Esto es el numero de puntos que habria que calcular de la ultima seccion para correlacionar hasta tLagMax
-vectorIndices=round(logspace (0, log10(numPuntos_ultimaSeccion), numPuntosSeccion));  % logspace genera un vector FILA
-matrizIndices(:, seccion+1)=vectorIndices;
-tdata(:, numSecciones)=calculatdata (vectorIndices, multiBase, deltaT);
-
-%Ahora localizo los repetidos en tdata
-[~, m]=unique(tdata(:), 'last');
-indicesNOrepe(m)=true;
-
-%[tdata_ordenado orden_tdata]=sort(tdata(indicesNOrepe));
-
-
-
-function [G tdata]=correlacionSeccion (FCSData, deltaT, numSecciones, numPuntosSeccion, base, numData, matrizIndices, indicesNOrepe, tdataTodos)
 
 numCanales=size(FCSData, 2);
-numPuntosCorrTotal=numel(find(indicesNOrepe));
-G=zeros (numPuntosCorrTotal, 1);
-tdata_corr=zeros(numPuntosCorrTotal, 1);
+G=zeros (numPuntosCorrFinal, 1);
+tdata_corr=zeros(numPuntosCorrFinal, 1);
 
 tdata=tdataTodos(indicesNOrepe);
 
 numPuntosCorrAcumula=0;
-%Esto para las primeras numSecciones-1
-for seccion=1:numSecciones-1 %Hace una correlación por cada sección
+
+%Esto para las primeras numSecciones (menos la logarítmica)
+for seccion=1:numSecciones %Hace una correlación por cada sección
     multiBase=base^(seccion-1);
     vectorIndices=matrizIndices(indicesNOrepe(:, seccion), seccion);
     numPuntosCorrSeccion=numel(vectorIndices); %Número de puntos en la sección en los que se calculará la correlación
@@ -143,11 +105,3 @@ numPuntosCorrAcumula=numPuntosCorrAcumula+numPuntosCorrSeccion;
 G=G(IX, :);
 
 
-function tdata=calculatdata (vectorIndices, multiBase, deltaT)
-%Calcula tdata en cada sección para ver qué puntos se repiten en el cálculo de la correlación según la sección
-
-numPuntos=numel(vectorIndices);
-tdata=zeros(numPuntos, 1);
-for puntosCorrelacion=1:numPuntos
-    tdata(puntosCorrelacion)=vectorIndices(puntosCorrelacion)*multiBase*deltaT;
-end

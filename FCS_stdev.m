@@ -1,7 +1,7 @@
-function [M]= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax)
+function M= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax)
 
 %
-%  [M]= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax);
+%  M= FCS_stdev (FCSData, numIntervalos, deltaT, numSecciones, numPuntos, base, tLagMax);
 %
 %   Este programa devuelve la función de correlación G y su desviacion estándar SD calculada por el tercer metodo descrito en el articulo de Wohland
 %   et al. de 2001. Asimismo también devuelve los valores del tiempo de la curva de correlación, tdatacorr.

@@ -28,11 +28,17 @@ function M= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaT, numSeccion
 numCanales=size (FCSintervalos, 2);
 numIntervalos=size (FCSintervalos, 3);
 
-M=zeros(numPuntosSeccion*numSecciones, 1+numCanales*3, intervalos);
+
+%Calculo el número de puntos que tendrá la correlación al final, quitando los que se repiten
+[~ , ~ , ~, numPuntosCorrFinal]=FCS_calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tauLagMax);
+
+M=zeros(numPuntosCorrFinal, 1+numCanales*2, numIntervalos);
 
 for intervalo=1:numIntervalos
-    M (:, :, intervalo)= FCS_stdev(FCSintervalos(:,:,k), numSubIntervalosError, deltaT, numSecciones, numPuntosSeccion, base, tauLagMax);
+    M (:, :, intervalo)= FCS_stdev(FCSintervalos(:,:,intervalo), numSubIntervalosError, deltaT, numSecciones, numPuntosSeccion, base, tauLagMax);
 end
+
+
 
 % Gtotal=M(:,2:end,:);
 % tdatacorr=Mtotal(:,1,1);
