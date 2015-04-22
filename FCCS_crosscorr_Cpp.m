@@ -21,7 +21,7 @@ numpuntos=numel(vectorindices);
 %Gtempcuadrados=zeros (numdata, 1, 'double');
 G=zeros(numpuntos,1,'double');
 tdata=zeros (numpuntos, 1);
-
+vectorindices=vectorindices(:)';
 C_FCCS_crosscorr(G, tdata, FCSdata, deltat, vectorindices);
 
 % k=0;

@@ -7,12 +7,15 @@ function [imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align
 %
 % jri 3Dic14 (de FCS_analisis_BH de Unai)
 % jri 27Mar15 - Corrijo para cuando tenemos dos canales que analiza por separado
+% jri 22Abr15 - Error pequeño
+
 
 
 inicializamatlabpool();
 
 
 numCanales=numel(unique(photonArrivalTimes(:, 6)));
+
 %Seleccionar ROI de la imagen decodificada
 [imgROI, ~, indLinesLS, indLinesPS, timeInterval] = FCS_ROI(imgDecode, photonArrivalTimes, lineSync, pixelSync);
 if numCanales>1
@@ -28,6 +31,7 @@ if numCanales>1
     
 else %numCanales=1;
     [imgALIN, sigma2_5, indMaxCadaLinea]=FCS_membraneAlignment_space(imgROI);
+    option=1;
 end
 
 %Necesito convertir estos píxeles a tiempo y devolverlos!!

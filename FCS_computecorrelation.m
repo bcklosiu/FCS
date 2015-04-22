@@ -3,7 +3,7 @@ function varargout=FCS_computecorrelation (varargin)
 %
 % Scanning FCS:
 %[FCSintervalos, Gintervalos, FCSmean, Gmean, tData, binFreq]=...
-%    FCS_computecorrelation (photonArrivalTimes, numIntervalos, binLines, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion...
+%    FCS_computecorrelation (photonArrivalTimes, numIntervalos, binLines, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion, ...
 %    imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5);
 %
 % Point FCS
@@ -30,7 +30,7 @@ function varargout=FCS_computecorrelation (varargin)
 %Parámetros del cálculo de la incertidumbre
 %   numSubIntervalosError es el número de subintercalos para los que calcula la correlación y que utiliza para obtener la incertidumbre (error estándar) de cada punto de la curva de correlación
 %
-%   tipoCorrelacion puede ser auto, cross o todas 
+%   tipoCorrelacion puede ser 1 o 2 para autocorrelación de los canales 1 o 2, respectivamente, o 3 para ambas
 %
 %   TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
 %   
@@ -54,6 +54,7 @@ base=varargin{7};
 numSubIntervalosError=varargin{8};
 tipoCorrelacion=varargin{9};
 
+
 % Es esto necesario? 
 inicializamatlabpool();
 
@@ -72,7 +73,6 @@ if isScanning
     
 else
     binFreq=varargin{3};
-
     macroTimeCol=1;
     microTimeCol=2;
     channelsCol=3;
@@ -85,7 +85,6 @@ if isScanning
     binFreq=1/deltaTBin;
 
 else %isSCanningFCS==0 -  Esto es FCS puntual
-
     switch numCanales
         case 1
             t0=photonArrivalTimes(1, macroTimeCol)+photonArrivalTimes(1, microTimeCol); %pixel de referencia para binning (1er photon)
@@ -101,10 +100,18 @@ else %isSCanningFCS==0 -  Esto es FCS puntual
     deltaTBin=1/binFreq;
 end %end if isSCanningFCS
 
+%FCS_binning_FIFO_pixel1 devuelve siempre dos canales si los hay
+%Si sólo quiero un canal tengo que deshacerlo. Si tipoCorrelacion=1 ó 2
+%indica que ése es el canal que quiero. Si es 3, entonces va todo.
+if tipoCorrelacion < 3
+    FCSData=FCSData(:, tipoCorrelacion);
+end
+
+disp(['Number of channels: ' num2str(size(FCSData, 2))])
+
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
-Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax, tipoCorrelacion);
-%[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, deltaTBin, tipoCorrelacion);
-[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, tipoCorrelacion);
+Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
+[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos);
 tData=(1:size(FCSintervalos, 1))/binFreq;
 
 if isScanning

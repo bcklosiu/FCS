@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 27-Mar-2015 12:41:24
+% Last Modified by GUIDE v2.5 21-Apr-2015 21:30:29
 
 % Begin initialization code - DO NOT EDIT
 
@@ -58,7 +58,7 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior. 
 
-variables.anaFCS_version='26Mar15'; %Esta es la versión del código
+variables.anaFCS_version='20Apr15'; %Esta es la versión del código
 variables.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
 
 variables.path=pwd;
@@ -75,10 +75,16 @@ set(handles.edit_maximumTauLag, 'String', '10');
 set(handles.edit_sections, 'String', '3');
 set(handles.edit_base, 'String', '4');
 set(handles.edit_pointsPerSection, 'String', '20');
-set(handles.edit_binningFrequency, 'Enable', 'off') 
+set(handles.edit_binningFrequency, 'Enable', 'on') 
 set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
 set(handles.edit_channel, 'String', '1');
 set(handles.radiobutton_auto, 'Value', true)
+
+variables.h_figIntervalos=figure;
+variables.h_figPromedio=figure;
+variables.allFigures=[variables.h_figIntervalos variables.h_figPromedio];
+set (variables.allFigures, 'NumberTitle' , 'off', 'Visible', 'off', 'DockControls', 'off', 'Color', [1 1 1])
+set (variables.allFigures, 'CloseRequestFcn', @FigCloseRequestFcn)
 
 
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
@@ -100,6 +106,10 @@ function varargout = gui_anaFCS_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Get default command line output from handles structure
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+set (v.allFigures, 'CloseRequestFcn', 'closereq')
+close (v.allFigures)
 
 varargout{1} = handles.output;
 delete (hObject);
@@ -183,67 +193,10 @@ end
 % --- Executes on button press in pushbutton_computeCorrelation.
 function pushbutton_computeCorrelation_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-
-if v.S.isScanning
-    macroTimeCol=4;
-    microTimeCol=5;
-    channelsCol=6;
-    v.S.binLines=str2double(get(handles.edit_binningLines, 'String'));
-    
-else
-    macroTimeCol=1;
-    microTimeCol=2;
-    channelsCol=3;
-    v.S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String'));
-    
-end
-v.S.numIntervalos=str2double(get(handles.edit_intervals, 'String'));
-v.S.numSubIntervalosError=str2double(get(handles.edit_subIntervalsForUncertainty, 'String'));
-v.S.tauLagMax=str2double(get(handles.edit_maximumTauLag, 'String'))/1000;
-v.S.numSecciones=str2double(get(handles.edit_sections, 'String'));
-v.S.base=str2double(get(handles.edit_base, 'String'));
-v.S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
-v.S.tipoCorrelacion='todas';
-if get (handles.radiobutton_auto, 'Value')
-    v.S.tipoCorrelacion='auto';
-    v.S.channel=str2double(get(handles.edit_channel, 'String'));
-end
-if get (handles.radiobutton_cross, 'Value')
-    v.S.tipoCorrelacion='auto';
-end
-
-
 set (handles.figure1,'Pointer','watch')
 drawnow update
-disp ('Computing correlation')
-tic;
-if v.S.isScanning
-    [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData, v.S.binFreq]=...
-        FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binLines, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion, ...
-        v.S.imgBin, v.S.lineSync, v.S.indLinesLS, v.S.indMaxCadaLinea, v.S.sigma2_5);
-    s=sprintf('%3.2f', v.S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
-    set (handles.edit_binningFrequency, 'String', s);
-else
-    [v.S.FCSintervalos, v.S.Gintervalos, v.S.FCSmean, v.S.Gmean, v.S.tData]=...
-        FCS_computecorrelation (v.S.photonArrivalTimes, v.S.numIntervalos, v.S.binFreq, v.S.tauLagMax, v.S.numSecciones, v.S.numPuntosSeccion, v.S.base, v.S.numSubIntervalosError, v.S.tipoCorrelacion, 1);
-end
-tdecode=toc;
-disp (['Correlation time: ' num2str(tdecode) ' s'])
-v.S.intervalosPromediados=1:v.S.numIntervalos; %Al principio promediamos todos
-
-for n=1:v.S.numIntervalos
-    [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
-    set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
-end
-%    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
-[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
-promedioString='';
-for n=1:numel(v.S.intervalosPromediados)
-    promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
-end
-promedioString=promedioString(1:end-2); %Le quito la última ', '
-set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
-
+v.S=computecorrelation (v.S, v.R, handles);
+disp ('OK')
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
@@ -254,18 +207,16 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
-for n=1:v.S.numIntervalos
-    [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
-    set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
-end
-%    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
-[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
+set (v.allFigures, 'Visible', 'on')
+gui_FCSrepresenta (v.S.FCSintervalos, v.S.Gintervalos, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figIntervalos)
+FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
 for n=1:numel(v.S.intervalosPromediados)
     promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
 end
 promedioString=promedioString(1:end-2); %Le quito la última ', '
 set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+
 
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
@@ -276,12 +227,27 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 function pushbutton_saveFCSData_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
-S=v.S;
+posName=find(v.fname=='\', 1, 'last')+1;
+fname=v.fname(posName:end);
+posName=strfind(fname, '_raw');
+if posName
+    fname=[fname(1:posName-1) '.mat'];
+end
+[fname, v.path] = uiputfile({'*.mat'},'Save FCS file', [v.path fname]);
 set (handles.figure1,'Pointer','watch')
 drawnow update
-disp (['Saving FCS analysis of ' v.fname])
-    save (v.fname, '-struct', 'S', '-append')
-disp ('OK')
+
+if fname
+    disp (['Saving ' v.path fname])
+    S=v.S;
+    S=orderfields(S);
+    if exist([v.path fname], 'file')
+        save ([v.path fname], '-struct', 'S', '-append')
+    else
+        save ([v.path fname], '-struct', 'S')
+    end
+    disp ('OK')
+end
 set (handles.figure1,'Pointer','arrow')
 
 
@@ -447,54 +413,13 @@ drawnow update
 if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
-    v.S=load ([v.path FileName], 'isScanning');
     v.fname=[v.path FileName];
-    if v.S.isScanning
-        v.S=load (v.fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'imgDecode', 'lineSync', 'pixelSync');
-        disp ('Scanning FCS experiment')
-        macroTimeCol=4;
-        microTimeCol=5;
-        channelsCol=6;
-
-        [v.S.imgBin, v.S.indLinesLS, v.S.indMaxCadaLinea, v.S.sigma2_5, v.S.timeInterval]=FCS_align(v.S.photonArrivalTimes, v.S.imgDecode, v.S.lineSync, v.S.pixelSync);
-        
-        strT0=sprintf('%3.2f', v.S.timeInterval(1));
-        strTf=sprintf('%3.2f', v.S.timeInterval(2));
-        set(handles.edit_t0, 'String', strT0);
-        set(handles.edit_tf, 'String', strTf);
-        set(handles.edit_binningFrequency, 'Enable', 'off', 'String', '') 
-        v.S.binLines=1;
-        set(handles.edit_binningLines, 'Enable', 'on', 'String', num2str(v.S.binLines)) 
-        v.S.binFreq=1400/v.S.binLines;
-        s=sprintf('%3.2f', v.S.binFreq/1000);
-        set (handles.edit_binningFrequency, 'String', s)
-        v.S.tauLagMax=5;
-        set(handles.edit_maximumTauLag, 'String', num2str(v.S.tauLagMax/1E-3));
-        v.S.numSecciones=2;
-        set(handles.edit_sections, 'String', num2str(v.S.numSecciones));
-        
-        
-        
-    else
-        v.S=load (v.fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
-        disp ('Point FCS experiment')
-        macroTimeCol=1;
-        microTimeCol=2;
-        channelsCol=3;
-        
-        set(handles.edit_binningFrequency, 'Enable', 'on', 'String', '100') 
-        set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
-
-    end
-    v.S.acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
-    strAcqTime=sprintf('%3.2f', v.S.acqTime);
-    set(handles.edit_acquisitionTime, 'String', strAcqTime);
-%    S=v.S;
-%    save ([v.path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
-
+    scannerFreq=1400;
+    [v.S v.R]=loadrawFCSdata(v.fname, scannerFreq, handles);
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
+    disp ('OK')
 end
 
 set (handles.figure1,'Pointer','arrow')
@@ -620,8 +545,8 @@ else
 end
 v.S.binLines=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
 v.S.binFreq=1400/v.S.binLines;
-s=sprintf('%3.2f', v.S.binFreq/1000);
-set (handles.edit_binningFrequency, 'String', s)
+strBinFreq=sprintf('%3.2f', v.S.binFreq/1000);
+set (handles.edit_binningFrequency, 'String', strBinFreq)
 setappdata (handles.figure1, 'v', v);
 
 % --- Executes during object creation, after setting all properties.
@@ -691,7 +616,7 @@ else
     funStr='fitfcn_FCS_3DTauD';
 end
 
-answer=inputdlg('Fit correlation curves: ', 'Choose curves ti fit', 1);
+answer=inputdlg('Fit correlation curves: ', 'Choose curves to fit', 1);
 rangeString=answer{1};
 endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
 v.S.fittedCurves=pagerangeparser (rangeString, 1, endPage);
@@ -722,7 +647,6 @@ setappdata (handles.figure1, 'v', v);
 
 
 
-
 function edit_channel_Callback(hObject, eventdata, handles)
 % hObject    handle to edit_channel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -743,3 +667,168 @@ function edit_channel_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+function FigCloseRequestFcn (hObject, eventdata)
+% Esta es la función que se ejecuta cuando alguien quiere cerrar una
+% ventana que contiene imágenes
+set (hObject, 'Visible', 'off')
+
+
+
+% --- Executes on button press in pushbutton_batchDecodeRawData.
+function pushbutton_batchDecodeRawData_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+pathName = uigetdirJava(v.path, 'Choose folder');
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(pathName)
+    v.path=[pathName '\'];
+    d=dir('*.spc');
+    numFiles=numel(d);
+    disp (['Decoding ' num2str(numFiles) ' files'])
+    for n=1:numFiles;
+        disp ([num2str(numFiles+1-n) ' files left'])
+        fileName=d(n).name;
+        v.S.rawFile=[v.path fileName];
+        pos=find(v.path=='\', 2, 'last');
+        nombreFCSData=['...' v.S.rawFile(pos:end-4)];
+        set (handles.figure1, 'Name' , nombreFCSData)
+        FCS_load(v.S.rawFile);
+    end
+    disp ('Finished decoding')
+end
+
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+
+% --- Executes on button press in pushbutton_batchCorrelate.
+function pushbutton_batchCorrelate_Callback(hObject, eventdata, handles)
+
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+pathName = uigetdirJava(v.path, 'Choose folder');
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(pathName)
+    answer=inputdlg('Enter name tail that will be added to the filename', 'Filename');
+    nameTail=['_' answer{1}];
+    v.path=[pathName '\'];
+    d=dir([v.path '*_raw.mat']);
+    numFiles=numel(d);
+    disp (['Correlating ' num2str(numFiles) ' files'])
+    for n=1:numFiles;
+        disp ([num2str(numFiles+1-n) ' files left'])
+        fname=d(n).name;
+        disp (['Loading ' v.path fname])
+        scannerFreq=1400;
+        [S R]=loadrawFCSdata([v.path fname], scannerFreq, handles);
+        S=computecorrelation (S, R, handles);
+        S=orderfields(S);
+        fname=[fname(1:end-8) nameTail '.mat'];
+        disp(['Saving ' v.path fname])
+        if exist([v.path fname], 'file')
+            save ([v.path fname], '-struct', 'S', '-append')
+        else
+            save ([v.path fname], '-struct', 'S')
+        end
+    disp ('OK')        
+    end
+    disp ('Finished correlating')
+end
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+function [S R]=loadrawFCSdata(fname, scannerFreq, handles)
+%fname debe llevar el path
+%S contiene los datos que guardaremos en el archivo .mat
+%R contiene los datos raw con los que opera
+S=load (fname, 'isScanning'); 
+if S.isScanning
+	disp ('Scanning FCS experiment')
+    R=load (fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'imgDecode', 'lineSync', 'pixelSync');
+    macroTimeCol=4;
+    microTimeCol=5;
+    channelsCol=6;
+    [R.imgBin, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5, S.timeInterval]=...
+        FCS_align(R.photonArrivalTimes, R.imgDecode, R.lineSync, R.pixelSync);
+    %imgBin, indLinesLS, indMaxCadaLinea están en R, por tanto no se
+    %guardarán al darle a save, aunque están disponibles durante la sesión
+    strT0=sprintf('%3.2f', S.timeInterval(1));
+    strTf=sprintf('%3.2f', S.timeInterval(2));
+    set(handles.edit_t0, 'String', strT0);
+    set(handles.edit_tf, 'String', strTf);
+    set(handles.edit_binningFrequency, 'Enable', 'off', 'String', '')
+    S.binLines=1;
+    set(handles.edit_binningLines, 'Enable', 'on', 'String', num2str(S.binLines))
+    S.binFreq=scannerFreq/S.binLines;
+    strBinFreq=sprintf('%3.2f', S.binFreq/1000);
+    set (handles.edit_binningFrequency, 'String', strBinFreq)
+    S.tauLagMax=5;
+    set(handles.edit_maximumTauLag, 'String', num2str(S.tauLagMax/1E-3));
+    S.numSecciones=2;
+    set(handles.edit_sections, 'String', num2str(S.numSecciones));
+    
+else
+    disp ('Point FCS experiment')
+    R=load (fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
+    macroTimeCol=1;
+    microTimeCol=2;
+    channelsCol=3;
+    set(handles.edit_binningLines, 'Enable', 'off', 'String', '')
+  
+end
+S.acqTime=R.photonArrivalTimes(end, macroTimeCol)+R.photonArrivalTimes(end, microTimeCol)-(R.photonArrivalTimes(1, macroTimeCol)+R.photonArrivalTimes(1, microTimeCol));
+strAcqTime=sprintf('%3.2f', S.acqTime);
+set(handles.edit_acquisitionTime, 'String', strAcqTime);
+%    save ([path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
+
+function S=computecorrelation (S_in, R, handles)
+
+S=S_in;
+if S.isScanning
+    macroTimeCol=4;
+    microTimeCol=5;
+    channelsCol=6;
+    S.binLines=str2double(get(handles.edit_binningLines, 'String'));
+else
+    macroTimeCol=1;
+    microTimeCol=2;
+    channelsCol=3;
+    S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String'));
+end
+
+S.numIntervalos=str2double(get(handles.edit_intervals, 'String'));
+S.numSubIntervalosError=str2double(get(handles.edit_subIntervalsForUncertainty, 'String'));
+S.tauLagMax=str2double(get(handles.edit_maximumTauLag, 'String'))/1000;
+S.numSecciones=str2double(get(handles.edit_sections, 'String'));
+S.base=str2double(get(handles.edit_base, 'String'));
+S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
+S.tipoCorrelacion='cross';
+if get (handles.radiobutton_auto, 'Value')
+    S.tipoCorrelacion='auto';
+    S.channel=str2double(get(handles.edit_channel, 'String'));
+end
+if get (handles.radiobutton_cross, 'Value')
+    S.tipoCorrelacion='cross';
+    S.channel=3;
+end
+
+set (handles.figure1,'Pointer','watch')
+drawnow update
+disp ('Computing correlation')
+tic;
+if S.isScanning
+    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.tData, S.binFreq]=...
+        FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
+        R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
+    strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
+    set (handles.edit_binningFrequency, 'String', strBinFreq);
+else
+    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.tData]=...
+        FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
+end
+tdecode=toc;
+disp (['Correlation time: ' num2str(tdecode) ' s'])
+S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
