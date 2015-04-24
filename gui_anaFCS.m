@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 21-Apr-2015 21:30:29
+% Last Modified by GUIDE v2.5 24-Apr-2015 16:51:49
 
 % Begin initialization code - DO NOT EDIT
 
@@ -132,7 +132,7 @@ if ischar(FileName)
     set (handles.figure1,'Pointer','watch')
     drawnow update
     v.path=PathName;
-    v.S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'tipoCorrelacion',...
+    v.S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
         'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning');
     v.fname=[v.path FileName];
     if v.S.isScanning
@@ -164,23 +164,21 @@ if ischar(FileName)
     switch lower(v.S.tipoCorrelacion)
         case 'auto'
             set (handles.radiobutton_auto, 'Value', 1)
-        case 'cross'
+        otherwise
             set (handles.radiobutton_cross, 'Value', 1)
-        case 'todas'
-            set (handles.radiobutton_all, 'Value', 1)
     end
+
     
     for n=1:v.S.numIntervalos
-        [~, ~, v.h_figIntervalos(n)]=FCS_representa (v.S.FCSintervalos(:,1,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.tipoCorrelacion, 1); %Las ventana promedio va a ser la 500
-        set (v.h_figIntervalos(n), 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(n)])
+        [~, ~, v.h_figIntervalos]=FCS_representa (v.S.FCSintervalos(:,:,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
     end
-    %    set (v.h_figIntervalos, 'CloseRequestFcn', @FigCloseRequestFcn)
-    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, 1);
+    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.channel, v.h_figPromedio);
     promedioString='';
     for n=1:numel(v.S.intervalosPromediados)
         promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
     end
     promedioString=promedioString(1:end-2); %Le quito la última ', '
+    set (v.allFigures, 'Visible', 'on')
     set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
     
     pos=find(v.path=='\', 2, 'last');
@@ -208,6 +206,8 @@ function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 set (v.allFigures, 'Visible', 'on')
+v.S.tipoCorrelacion
+
 gui_FCSrepresenta (v.S.FCSintervalos, v.S.Gintervalos, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figIntervalos)
 FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
@@ -431,60 +431,15 @@ function pushbutton_saveAsASCII_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); 
 set (handles.figure1,'Pointer','watch')
 drawnow update
-fileName=v.fname;
-fileName=[fileName(1:end-4) '.dat'];
-pos=find(fileName=='\', 1, 'last');
-if isempty(pos)
-    pos=0;
-end
-nombreFCSData=fileName(pos+1:end-4);
-disp (['Saving ' nombreFCSData ' as ASCII'])
-fid=fopen(fileName, 'w'); %Esto lo hice muy bien en genpol
-fprintf(fid, '%s', datestr(now));
-fprintf(fid, '\n%s', fileName);
-fprintf(fid, '\nAveraged curves:\t');
-fprintf(fid, '%d, ', v.S.intervalosPromediados);
-fprintf(fid, '\n\n%s\t%s\t%s', 'time(ms)', 'G', 'Error');
-fprintf(fid, '\n%f\t%f\t%f', [v.S.Gmean(:,1), v.S.Gmean(:,2), v.S.Gmean(:,3)]');
-fclose (fid);
-
+FCS_G2ASCII (v.fname, v.S.channel, v.S.intervalosPromediados, v.S.Gmean);
 set (handles.figure1,'Pointer','arrow')
 drawnow update
 disp ('OK')
-
-set (handles.figure1,'Pointer','arrow')
-
 
 
 
 % --- Executes on button press in pushbutton_decodeRawData.
 function pushbutton_decodeRawData_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-[FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
-set (handles.figure1,'Pointer','watch')
-drawnow update
-if ischar(FileName)
-    v.path=PathName;
-    v.S.rawFile=[PathName FileName];
-    pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.S.rawFile(pos:end-4)];
-    set (handles.figure1, 'Name' , nombreFCSData)
-    [v.S.isScanning, v.S.photonArrivalTimes, v.S.TACrange, v.S.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.S.rawFile);
-     if v.S.isScanning
-        v.S.imgDecode=imgDecode;
-        v.S.frameSync=frameSync;
-        v.S.lineSync=lineSync;
-        v.S.pixelSync=pixelSync;
-    end
-end
-
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
-%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
-%
-% Para point FCS
-% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
 
 
 
@@ -571,20 +526,19 @@ function pushbutton_averageFCSCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 answer=inputdlg('Average FCS curves: ', 'Average', 1);
-rangeString=answer{1};
-endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
-v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-
-[v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion);
-
-[~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion);
-promedioString='';
-for n=1:numel(v.S.intervalosPromediados)
-    promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+if not(isempty(answer))
+    rangeString=answer{1};
+    endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+    v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
+    [v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion);
+    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
+    promedioString='';
+    for n=1:numel(v.S.intervalosPromediados)
+        promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+    end
+    promedioString=promedioString(1:end-2); %Le quito la última ', '
+    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
 end
-promedioString=promedioString(1:end-2); %Le quito la última ', '
-set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
-
 setappdata (handles.figure1, 'v', v);
 
 
@@ -683,7 +637,7 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(pathName)
     v.path=[pathName '\'];
-    d=dir('*.spc');
+    d=dir([v.path '*.spc']);
     numFiles=numel(d);
     disp (['Decoding ' num2str(numFiles) ' files'])
     for n=1:numFiles;
@@ -751,6 +705,8 @@ if S.isScanning
     macroTimeCol=4;
     microTimeCol=5;
     channelsCol=6;
+	S.numChannelsAcquisition=numel(unique(R.photonArrivalTimes(:, channelsCol)));
+    disp(['Number of acquisition channels: ' num2str(S.numChannelsAcquisition)])
     [R.imgBin, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5, S.timeInterval]=...
         FCS_align(R.photonArrivalTimes, R.imgDecode, R.lineSync, R.pixelSync);
     %imgBin, indLinesLS, indMaxCadaLinea están en R, por tanto no se
@@ -776,6 +732,8 @@ else
     macroTimeCol=1;
     microTimeCol=2;
     channelsCol=3;
+	S.numChannelsAcquisition=numel(unique(R.photonArrivalTimes(:, channelsCol)));
+    disp(['Number of acquisition channels: ' num2str(S.numChannelsAcquisition)])
     set(handles.edit_binningLines, 'Enable', 'off', 'String', '')
   
 end
@@ -820,15 +778,82 @@ drawnow update
 disp ('Computing correlation')
 tic;
 if S.isScanning
-    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.tData, S.binFreq]=...
+    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.cps, S.tData, S.binFreq]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
         R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
     strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
     set (handles.edit_binningFrequency, 'String', strBinFreq);
 else
-    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.tData]=...
+    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.cps, S.tData]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
 S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
+
+
+% --- Executes on button press in pushbutton_batchSaveAsASCII.
+function pushbutton_batchSaveAsASCII_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+pathName = uigetdirJava(v.path, 'Choose folder');
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(pathName)
+    v.path=[pathName '\'];
+    d=dir([v.path '*.mat']);
+    numFiles=numel(d);
+    disp (['Saving ' num2str(numFiles) ' files as ASCII'])
+    for n=1:numFiles;
+        disp ([num2str(numFiles+1-n) ' files left'])
+        fname=d(n).name;
+        disp (['Loading ' v.path fname])
+        S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean', 'tipoCorrelacion');
+        FCS_G2ASCII ([v.path fname], S.channel, S.intervalosPromediados, S.Gmean, S.tipoCorrelacion);
+    disp ('OK')        
+    end
+    disp ('Finished converting to ASCII')
+end
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+
+% --------------------------------------------------------------------
+function Untitled_1_Callback(hObject, eventdata, handles)
+% hObject    handle to Untitled_1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function menu_decodeRawData_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_decodeRawData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+[FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(FileName)
+    v.path=PathName;
+    v.R.rawFile=[PathName FileName];
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['...' v.R.rawFile(pos:end-4)];
+    set (handles.figure1, 'Name' , nombreFCSData)
+    [v.S.isScanning, v.R.photonArrivalTimes, v.R.TACrange, v.R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.R.rawFile);
+     if v.S.isScanning
+        v.R.imgDecode=imgDecode;
+        v.R.frameSync=frameSync;
+        v.R.lineSync=lineSync;
+        v.R.pixelSync=pixelSync;
+    end
+end
+
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
+%
+% Para point FCS
+% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)

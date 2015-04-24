@@ -50,6 +50,8 @@ tic;
 tdecode=toc;
 
 isScanning=and (numel(imgDecode)>1, and(numel(frameSync)>1, and(numel(lineSync)>1, numel(pixelSync)>1)));
+numChannelsAcquisition=numel(unique(photonArrivalTimes(:, 6)));
+disp(['Number of acquisition channels: ' num2str(numChannelsAcquisition)])
 
 
 fname=[fname(1:end-4) '.mat'];

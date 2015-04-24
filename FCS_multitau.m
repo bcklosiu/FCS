@@ -57,8 +57,7 @@ for seccion=1:numSecciones %Hace una correlación por cada sección
             FCS_autocorr_Cpp (FCSDataSeccion, multiBase*deltaT, vectorIndices);
     else %Correlación cruzada
         FCSDataSeccion=zeros (numDataSeccion, 2, 'double');
-        C_FCS_binning1(FCSDataSeccion(:, 1), FCSData(:, 1), multiBase);
-        C_FCS_binning1(FCSDataSeccion(:, 2), FCSData(:, 2), multiBase);
+        C_FCS_binning1(FCSDataSeccion, FCSData, multiBase);
         %{
             for n=1:numDataSeccion     %Hace el binning para cada sección según la base
                 FCSDataSeccion(n, 1)=sum(FCSData(((n-1)*multiBase+1:n*multiBase), 1));

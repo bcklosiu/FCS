@@ -55,7 +55,6 @@ hsup=subplot (2,1,1); %Representa las trazas
 hinf=subplot (2,1,2); % Representa la autocorrelacion
 
 [FCSTraza, tTraza, cpscanal]=FCS_calculabinstraza(FCSData, deltaT, 0.01);
-linePos=mean(FCSTraza);
 if tipoCorrelacion==3 % cuando es correlación cruzada
     hsup(2)=axes;
     set(hfig, 'CurrentAxes', hsup(1))
@@ -65,7 +64,7 @@ if tipoCorrelacion==3 % cuando es correlación cruzada
     set(hfig, 'CurrentAxes', hsup(2))
     htemp2=plot (tTraza, FCSTraza(:,2), 'Color', rojo, 'Linewidth', 1.5);
     hLegend(3)=legend (['Ch 2: ', num2str(cpscanal(2))]);
-    
+    linePos=mean(FCSTraza);
     v=axis (hsup(1));
     line ([v(1) v(2)], [linePos(1) linePos(1)], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
     line ([v(1) v(2)], [linePos(2) linePos(2)], 'Color', [0 0 0], 'LineStyle', ':')
@@ -89,16 +88,19 @@ if tipoCorrelacion==3 % cuando es correlación cruzada
     hLegend(2)=legend ('Ch1', 'Ch2', 'Cross');
     hold off
 else
+    %canal=tipoCorrelacion;
+    canal=1;
     set(hfig, 'CurrentAxes', hsup)
-    htemp=plot (tTraza, FCSTraza(:,1), 'Color', verde, 'Linewidth', 1.5);
-    hLegend(1)=legend (['Ch 1: ', num2str(cpscanal(1))]);
+    htemp=plot (tTraza, FCSTraza(:, canal), 'Color', verde, 'Linewidth', 1.5);
+    hLegend(1)=legend (['Ch ', num2str(canal) ': ', num2str(cpscanal(canal))]);
     v=axis(hsup);
+    linePos=mean(FCSTraza(:, 1));
     line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':')
-    axis (hsup, [v(1) v(2) min(min(FCSTraza))*0.99 max(max(FCSTraza))*1.01])
+    axis (hsup, [v(1) v(2) min(FCSTraza(:, canal))*0.99 max(FCSTraza(:, canal))*1.01])
     
     hold off
     set(hfig, 'CurrentAxes', hinf)
-    hCorrPlot=errorbar (tdata_k, G(:,1), SD(:,1), 'o-', 'Color', verde, 'Linewidth', 1.5);
+    hCorrPlot=errorbar (tdata_k, G(:, canal), SD(:, canal), 'o-', 'Color', verde, 'Linewidth', 1.5);
     %{
         htemp=plot (tTraza, FCSTraza(:,2), 'Color', rojo, 'Linewidth', 1.5);
         hLegend(1)=legend (['Ch 2: ', num2str(cpscanal(2))]);

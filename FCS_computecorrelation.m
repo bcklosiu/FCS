@@ -2,19 +2,20 @@ function varargout=FCS_computecorrelation (varargin)
 
 %
 % Scanning FCS:
-%[FCSintervalos, Gintervalos, FCSmean, Gmean, tData, binFreq]=...
+%[FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData, binFreq]=...
 %    FCS_computecorrelation (photonArrivalTimes, numIntervalos, binLines, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion, ...
 %    imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5);
 %
 % Point FCS
-%[FCSintervalos, Gintervalos, FCSmean, Gmean]=...
+%[FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData]=...
 %   FCS_computecorrelation (photonArrivalTimes, numIntervalos, binFreq, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion)
-%
 %
 %   FCSintervalos es FCSData de cada intervalo (los datos de FCS en bins temporales de tamaño deltaT=1/binFreq)
 %   Gintervalos es la curva experimental de correlación de cada intervalo con su tiempo, su traza y su error en la tercera columna
 %   FCSmean es el promedio de todas las trazas
 %   Gmean es el promedio de todas las curvas de correlación
+%   cps son las cuentas por segundo en cada canal
+%   tData es el tiempo de cada punto en FCSintervalos
 %
 %   photonArrivalTimes es la matriz de tiempos de llegada (arrivalTimes) de B&H
 %   binFreq es la frecuencia del binning, en Hz.
@@ -43,6 +44,7 @@ function varargout=FCS_computecorrelation (varargin)
 % ULS Sep2014
 % jri 25Nov14
 % jri 22Ene15 - Corrijo el deltaTbin, que faltaba para el point-FCS
+% jri 24Abr15 - Añado las cuentas por segundo y corrijo tData para que sea el t de los FCSintervalos y no el de FCSData
 
 
 photonArrivalTimes=varargin{1};
@@ -89,7 +91,7 @@ else %isSCanningFCS==0 -  Esto es FCS puntual
         case 1
             t0=photonArrivalTimes(1, macroTimeCol)+photonArrivalTimes(1, microTimeCol); %pixel de referencia para binning (1er photon)
         case 2 
-            t0channels=zeros(numCanales,1);
+            t0channels=zeros(numCanales, 1);
             for channel=1:numCanales
                 indPrimerPhotonCanal=find(photonArrivalTimes(:, channelsCol)==channel-1,1,'first');
                 t0channels(channel)=photonArrivalTimes(indPrimerPhotonCanal, macroTimeCol)+photonArrivalTimes(indPrimerPhotonCanal, microTimeCol);
@@ -107,16 +109,19 @@ if tipoCorrelacion < 3
     FCSData=FCSData(:, tipoCorrelacion);
 end
 
-disp(['Number of channels: ' num2str(size(FCSData, 2))])
+disp(['Correlating ' num2str(size(FCSData, 2)) ' channels'])
 
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
 Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
 [FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos);
-tData=(1:size(FCSintervalos, 1))/binFreq;
+
+numData=size(FCSData,1);
+cps=round(sum(FCSData)/(numData*deltaTBin));
+tData=(1:FCSintervalos)*deltaTBin;
 
 if isScanning
-    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, tData, binFreq};
+    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData, binFreq};
 else
-    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, tData};
+    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData};
 end
 

@@ -30,14 +30,17 @@ numIntervalos=size (FCSintervalos, 3);
 
 %Calculo el número de puntos que tendrá la correlación al final, quitando los que se repiten
 [~ , ~ , ~, numPuntosCorrFinal]=FCS_calculaPuntosCorrelacionRepe (numSecciones, base, numPuntosSeccion, deltaT, tauLagMax);
-M=zeros(numPuntosCorrFinal, 1+numCanales*2, numIntervalos);
 
+numColumnasM=3; %Autocorrelación: M=[tdata, G, SD]
+if numCanales>1
+    numColumnasM=7; %Correlación cruzada: M=[tdata, G1, SD1, G2, SD2, Gcc, SDcc]
+end
+
+M=zeros(numPuntosCorrFinal, numColumnasM, numIntervalos);
 %Bucle que hay que paralelizar
 for intervalo=1:numIntervalos
     M (:, :, intervalo)= FCS_stdev(FCSintervalos(:,:,intervalo), numSubIntervalosError, deltaT, numSecciones, numPuntosSeccion, base, tauLagMax);
 end
-
-
 
 % Gtotal=M(:,2:end,:);
 % tdatacorr=Mtotal(:,1,1);
