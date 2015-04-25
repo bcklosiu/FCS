@@ -30,7 +30,7 @@ function varargout=FCS_computecorrelation (varargin)
 %   tauLagMax es el último punto temporal (tiempo máximo) para el que se calcula la correlación (con todos los fotones adquiridos, incluyendo los de momentos posteriores a tauLagMax)
 %Parámetros del cálculo de la incertidumbre
 %   numSubIntervalosError es el número de subintercalos para los que calcula la correlación y que utiliza para obtener la incertidumbre (error estándar) de cada punto de la curva de correlación
-%
+%   Si es cero calcula la incertidumbre para el promedio de las curvas como SEM de las curvas promediadas
 %   tipoCorrelacion puede ser 1 o 2 para autocorrelación de los canales 1 o 2, respectivamente, o 3 para ambas
 %
 %   TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
@@ -113,11 +113,12 @@ disp(['Correlating ' num2str(size(FCSData, 2)) ' channels'])
 
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
 Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
-[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos);
+usaSubIntervalosError=logical(numSubIntervalosError); %Si numSubIntervalosError>0 entonces usa los subIntervalos para calcular la incertidumbre
+[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, usaSubIntervalosError);
 
 numData=size(FCSData,1);
 cps=round(sum(FCSData)/(numData*deltaTBin));
-tData=(1:FCSintervalos)*deltaTBin;
+tData=(1:numData)*deltaTBin;
 
 if isScanning
     varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData, binFreq};

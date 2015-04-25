@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 24-Apr-2015 16:51:49
+% Last Modified by GUIDE v2.5 24-Apr-2015 22:38:07
 
 % Begin initialization code - DO NOT EDIT
 
@@ -70,7 +70,6 @@ set(handles.edit_t0, 'String', '');
 set(handles.edit_tf, 'String', '');
 set(handles.edit_intervals, 'String', '');
 set(handles.edit_binningFrequency, 'String', '');
-set(handles.edit_subIntervalsForUncertainty, 'String', '18');
 set(handles.edit_maximumTauLag, 'String', '10');
 set(handles.edit_sections, 'String', '3');
 set(handles.edit_base, 'String', '4');
@@ -79,7 +78,10 @@ set(handles.edit_binningFrequency, 'Enable', 'on')
 set(handles.edit_binningLines, 'Enable', 'off', 'String', '') 
 set(handles.edit_channel, 'String', '1');
 set(handles.radiobutton_auto, 'Value', true)
+set(handles.radiobutton_averageSEM, 'Value', true)
+set(handles.edit_subIntervalsForUncertainty, 'String', '0', 'Enable', 'off');
 
+variables.numSubIntervalosError_anterior=18; %Por defecto cuando se activa
 variables.h_figIntervalos=figure;
 variables.h_figPromedio=figure;
 variables.allFigures=[variables.h_figIntervalos variables.h_figPromedio];
@@ -157,6 +159,12 @@ if ischar(FileName)
     set(handles.edit_intervals, 'String', num2str(v.S.numIntervalos));
     set(handles.edit_binningFrequency, 'String', num2str(v.S.binFreq/1E3));
     set(handles.edit_subIntervalsForUncertainty, 'String', num2str(v.S.numSubIntervalosError));
+    set(handles.edit_subIntervalsForUncertainty, 'Enable', 'off');
+    set(handles.radiobutton_averageSEM, 'Value', true)
+    if v.S.numSubIntervalosError
+        set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
+        set (handles.radiobutton_subIntervalsSEM, 'Value', true)
+    end
     set(handles.edit_maximumTauLag, 'String', num2str(v.S.tauLagMax/1E-3));
     set(handles.edit_sections, 'String', num2str(v.S.numSecciones));
     set(handles.edit_base, 'String', num2str(v.S.base));
@@ -188,26 +196,12 @@ if ischar(FileName)
     setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 end
 
-% --- Executes on button press in pushbutton_computeCorrelation.
-function pushbutton_computeCorrelation_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-set (handles.figure1,'Pointer','watch')
-drawnow update
-v.S=computecorrelation (v.S, v.R, handles);
-disp ('OK')
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
-
-
 
 % --- Executes on button press in pushbutton_plotCorrelationCurves.
 function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 set (v.allFigures, 'Visible', 'on')
-v.S.tipoCorrelacion
-
 gui_FCSrepresenta (v.S.FCSintervalos, v.S.Gintervalos, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figIntervalos)
 FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
@@ -219,47 +213,6 @@ set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString]
 
 
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
-
-
-
-% --- Executes on button press in pushbutton_saveFCSData.
-function pushbutton_saveFCSData_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-
-posName=find(v.fname=='\', 1, 'last')+1;
-fname=v.fname(posName:end);
-posName=strfind(fname, '_raw');
-if posName
-    fname=[fname(1:posName-1) '.mat'];
-end
-[fname, v.path] = uiputfile({'*.mat'},'Save FCS file', [v.path fname]);
-set (handles.figure1,'Pointer','watch')
-drawnow update
-
-if fname
-    disp (['Saving ' v.path fname])
-    S=v.S;
-    S=orderfields(S);
-    if exist([v.path fname], 'file')
-        save ([v.path fname], '-struct', 'S', '-append')
-    else
-        save ([v.path fname], '-struct', 'S')
-    end
-    disp ('OK')
-end
-set (handles.figure1,'Pointer','arrow')
-
-
-
-% --- Executes on button press in pushbutton_saveForPyCorrFit.
-function pushbutton_saveForPyCorrFit_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); 
-set (handles.figure1,'Pointer','watch')
-drawnow update
-%FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname]);
-FCS_savePyCorrformat(v.S.Gmean, v.S.FCSmean, v.S.binFreq, [v.path v.S.fname]);
-set (handles.figure1,'Pointer','arrow')
 
 
 
@@ -403,44 +356,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in pushbutton_loadRawFCSData.
-function pushbutton_loadRawFCSData_Callback(hObject, eventdata, handles)
-
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-[FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
-set (handles.figure1,'Pointer','watch')
-drawnow update
-if ischar(FileName)
-    v.path=PathName;
-    disp (['Loading ' FileName])
-    v.fname=[v.path FileName];
-    scannerFreq=1400;
-    [v.S v.R]=loadrawFCSdata(v.fname, scannerFreq, handles);
-    pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
-    set (handles.figure1, 'Name' , nombreFCSData)
-    disp ('OK')
-end
-
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
-
-% --- Executes on button press in pushbutton_saveAsASCII.
-function pushbutton_saveAsASCII_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); 
-set (handles.figure1,'Pointer','watch')
-drawnow update
-FCS_G2ASCII (v.fname, v.S.channel, v.S.intervalosPromediados, v.S.Gmean);
-set (handles.figure1,'Pointer','arrow')
-drawnow update
-disp ('OK')
-
-
-
-% --- Executes on button press in pushbutton_decodeRawData.
-function pushbutton_decodeRawData_Callback(hObject, eventdata, handles)
-
 
 
 
@@ -519,10 +434,6 @@ end
 
 % --- Executes on button press in pushbutton_averageFCSCurves.
 function pushbutton_averageFCSCurves_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_averageFCSCurves (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 answer=inputdlg('Average FCS curves: ', 'Average', 1);
@@ -530,7 +441,8 @@ if not(isempty(answer))
     rangeString=answer{1};
     endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
     v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-    [v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, v.S.tipoCorrelacion);
+    usaSubIntervalosError=logical(v.S.numSubIntervalosError); 
+    [v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, usaSubIntervalosError);
     [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
     promedioString='';
     for n=1:numel(v.S.intervalosPromediados)
@@ -550,14 +462,6 @@ disp (['Closing previously opened figures ' num2str(h')])
 end
 close (h)
 
-% function FigCloseRequestFcn (hObject, eventdata)
-% % Esta es la función que se ejecuta cuando alguien quiere cerrar una
-% % ventana que contiene imágenes
-% set (hObject, 'CloseRequestFcn', 'closereq')
-% close (hObject)
-% v=getappdata (handles.figure1, 'v'); %Recupera variables
-% v.S.intervalosPromediados(v.S.intervalosPromediados=1:v.S.numIntervalos;
-% setappdata (handles.figure1, 'v', v);
 
 
 % --- Executes on button press in pushbutton_fitIndividualCurves.
@@ -585,7 +489,6 @@ setappdata (handles.figure1, 'v', v);
 
 % --- Executes on button press in pushbutton_fitAverage.
 function pushbutton_fitAverage_Callback(hObject, eventdata, handles)
-
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 if v.S.isScanning
@@ -623,75 +526,9 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 function FigCloseRequestFcn (hObject, eventdata)
-% Esta es la función que se ejecuta cuando alguien quiere cerrar una
-% ventana que contiene imágenes
+% Esta es la función que se ejecuta cuando alguien quiere cerrar una ventana que contiene imágenes
 set (hObject, 'Visible', 'off')
 
-
-
-% --- Executes on button press in pushbutton_batchDecodeRawData.
-function pushbutton_batchDecodeRawData_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-pathName = uigetdirJava(v.path, 'Choose folder');
-set (handles.figure1,'Pointer','watch')
-drawnow update
-if ischar(pathName)
-    v.path=[pathName '\'];
-    d=dir([v.path '*.spc']);
-    numFiles=numel(d);
-    disp (['Decoding ' num2str(numFiles) ' files'])
-    for n=1:numFiles;
-        disp ([num2str(numFiles+1-n) ' files left'])
-        fileName=d(n).name;
-        v.S.rawFile=[v.path fileName];
-        pos=find(v.path=='\', 2, 'last');
-        nombreFCSData=['...' v.S.rawFile(pos:end-4)];
-        set (handles.figure1, 'Name' , nombreFCSData)
-        FCS_load(v.S.rawFile);
-    end
-    disp ('Finished decoding')
-end
-
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
-
-
-% --- Executes on button press in pushbutton_batchCorrelate.
-function pushbutton_batchCorrelate_Callback(hObject, eventdata, handles)
-
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-pathName = uigetdirJava(v.path, 'Choose folder');
-set (handles.figure1,'Pointer','watch')
-drawnow update
-if ischar(pathName)
-    answer=inputdlg('Enter name tail that will be added to the filename', 'Filename');
-    nameTail=['_' answer{1}];
-    v.path=[pathName '\'];
-    d=dir([v.path '*_raw.mat']);
-    numFiles=numel(d);
-    disp (['Correlating ' num2str(numFiles) ' files'])
-    for n=1:numFiles;
-        disp ([num2str(numFiles+1-n) ' files left'])
-        fname=d(n).name;
-        disp (['Loading ' v.path fname])
-        scannerFreq=1400;
-        [S R]=loadrawFCSdata([v.path fname], scannerFreq, handles);
-        S=computecorrelation (S, R, handles);
-        S=orderfields(S);
-        fname=[fname(1:end-8) nameTail '.mat'];
-        disp(['Saving ' v.path fname])
-        if exist([v.path fname], 'file')
-            save ([v.path fname], '-struct', 'S', '-append')
-        else
-            save ([v.path fname], '-struct', 'S')
-        end
-    disp ('OK')        
-    end
-    disp ('Finished correlating')
-end
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
 function [S R]=loadrawFCSdata(fname, scannerFreq, handles)
@@ -742,7 +579,7 @@ strAcqTime=sprintf('%3.2f', S.acqTime);
 set(handles.edit_acquisitionTime, 'String', strAcqTime);
 %    save ([path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
 
-function S=computecorrelation (S_in, R, handles)
+function [S FCS_intervalos]=computecorrelation (S_in, R, handles)
 
 S=S_in;
 if S.isScanning
@@ -786,14 +623,95 @@ if S.isScanning
 else
     [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.cps, S.tData]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
+    %Esto para cada intervalo
+    %[S.FCSTraza, S.tTraza]=FCS_calculabinstraza(FCSData, deltaT, 0.01);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
 S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 
 
-% --- Executes on button press in pushbutton_batchSaveAsASCII.
-function pushbutton_batchSaveAsASCII_Callback(hObject, eventdata, handles)
+
+% --------------------------------------------------------------------
+function menu_decodeRawData_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+[FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(FileName)
+    v.path=PathName;
+    v.R.rawFile=[PathName FileName];
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['...' v.R.rawFile(pos:end-4)];
+    set (handles.figure1, 'Name' , nombreFCSData)
+    [v.S.isScanning, v.R.photonArrivalTimes, v.R.TACrange, v.R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.R.rawFile);
+     if v.S.isScanning
+        v.R.imgDecode=imgDecode;
+        v.R.frameSync=frameSync;
+        v.R.lineSync=lineSync;
+        v.R.pixelSync=pixelSync;
+    end
+end
+
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
+%
+% Para point FCS
+% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
+
+
+
+
+% --------------------------------------------------------------------
+function menu_saveFCSAnalysis_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+posName=find(v.fname=='\', 1, 'last')+1;
+fname=v.fname(posName:end);
+posName=strfind(fname, '_raw');
+if posName
+    fname=[fname(1:posName-1) '.mat'];
+end
+[fname, v.path] = uiputfile({'*.mat'},'Save FCS file', [v.path fname]);
+set (handles.figure1,'Pointer','watch')
+drawnow update
+
+if fname
+    disp (['Saving ' v.path fname])
+    S=v.S;
+    S=orderfields(S);
+    if exist([v.path fname], 'file')
+        save ([v.path fname], '-struct', 'S', '-append')
+    else
+        save ([v.path fname], '-struct', 'S')
+    end
+    disp ('OK')
+end
+set (handles.figure1,'Pointer','arrow')
+
+% --------------------------------------------------------------------
+function menu_saveForPyCorrFit_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); 
+set (handles.figure1,'Pointer','watch')
+drawnow update
+%FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname]);
+FCS_savePyCorrformat(v.S.Gmean, v.S.FCSmean, v.S.binFreq, [v.path v.S.fname]);
+set (handles.figure1,'Pointer','arrow')
+
+
+% --------------------------------------------------------------------
+function menu_saveAsASCII_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); 
+set (handles.figure1,'Pointer','watch')
+drawnow update
+FCS_G2ASCII (v.fname, v.S.channel, v.S.intervalosPromediados, v.S.Gmean);
+set (handles.figure1,'Pointer','arrow')
+drawnow update
+disp ('OK')
+
+% --------------------------------------------------------------------
+function menu_batchConvertToASCII_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 pathName = uigetdirJava(v.path, 'Choose folder');
 set (handles.figure1,'Pointer','watch')
@@ -817,43 +735,122 @@ set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
-
 % --------------------------------------------------------------------
-function Untitled_1_Callback(hObject, eventdata, handles)
-% hObject    handle to Untitled_1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function menu_decodeRawData_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_decodeRawData (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
+function menu_loadRawFCSData_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-[FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
+[FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
 set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(FileName)
     v.path=PathName;
-    v.R.rawFile=[PathName FileName];
+    disp (['Loading ' FileName])
+    v.fname=[v.path FileName];
+    scannerFreq=1400;
+    [v.S v.R]=loadrawFCSdata(v.fname, scannerFreq, handles);
     pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.R.rawFile(pos:end-4)];
+    nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
-    [v.S.isScanning, v.R.photonArrivalTimes, v.R.TACrange, v.R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.R.rawFile);
-     if v.S.isScanning
-        v.R.imgDecode=imgDecode;
-        v.R.frameSync=frameSync;
-        v.R.lineSync=lineSync;
-        v.R.pixelSync=pixelSync;
-    end
+    disp ('OK')
 end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
-%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
-%
-% Para point FCS
-% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
+% --------------------------------------------------------------------
+function menu_computecorrelation_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+set (handles.figure1,'Pointer','watch')
+drawnow update
+v.S=computecorrelation (v.S, v.R, handles);
+disp ('OK')
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+% --------------------------------------------------------------------
+function menu_batchCorrelate_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+pathName = uigetdirJava(v.path, 'Choose folder');
+if ischar(pathName)
+    answer=inputdlg('Enter name tail that will be added to the filename', 'Filename');
+    nameTail=['_' answer{1}];
+    set (handles.figure1,'Pointer','watch')
+    drawnow update
+    v.path=[pathName '\'];
+    d=dir([v.path '*_raw.mat']);
+    numFiles=numel(d);
+    disp (['Correlating ' num2str(numFiles) ' files'])
+    for n=1:numFiles;
+        disp ([num2str(numFiles+1-n) ' files left'])
+        fname=d(n).name;
+        disp (['Loading ' v.path fname])
+        scannerFreq=1400;
+        [S R]=loadrawFCSdata([v.path fname], scannerFreq, handles);
+        S=computecorrelation (S, R, handles);
+        S=orderfields(S);
+        fname=[fname(1:end-8) nameTail '.mat'];
+        disp(['Saving ' v.path fname])
+        if exist([v.path fname], 'file')
+            save ([v.path fname], '-struct', 'S', '-append')
+        else
+            save ([v.path fname], '-struct', 'S')
+        end
+    disp ('OK')        
+    end
+    disp ('Finished correlating')
+end
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+% --------------------------------------------------------------------
+function menu_batchDecode_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+pathName = uigetdirJava(v.path, 'Choose folder');
+set (handles.figure1,'Pointer','watch')
+drawnow update
+if ischar(pathName)
+    v.path=[pathName '\'];
+    d=dir([v.path '*.spc']);
+    numFiles=numel(d);
+    disp (['Decoding ' num2str(numFiles) ' files'])
+    for n=1:numFiles;
+        disp ([num2str(numFiles+1-n) ' files left'])
+        fileName=d(n).name;
+        v.S.rawFile=[v.path fileName];
+        pos=find(v.path=='\', 2, 'last');
+        nombreFCSData=['...' v.S.rawFile(pos:end-4)];
+        set (handles.figure1, 'Name' , nombreFCSData)
+        FCS_load(v.S.rawFile);
+    end
+    disp ('Finished decoding')
+end
+
+set (handles.figure1,'Pointer','arrow')
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+
+
+% --- Executes when selected object is changed in uipanel_uncertainty.
+function uipanel_uncertainty_SelectionChangeFcn(hObject, eventdata, handles)
+% hObject    handle to the selected object in uipanel_uncertainty 
+% eventdata  structure with the following fields (see UIBUTTONGROUP)
+%	EventName: string 'SelectionChanged' (read only)
+%	OldValue: handle of the previously selected object or empty if none was selected
+%	NewValue: handle of the currently selected object
+% handles    structure with handles and user data (see GUIDATA)
+
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+if get(handles.radiobutton_subIntervalsSEM, 'Value')
+    v.S.numSubIntervalosError=v.numSubIntervalosError_anterior;
+    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(v.S.numSubIntervalosError));
+    set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
+end
+if get(handles.radiobutton_averageSEM, 'Value')
+    v.numSubIntervalosError_anterior=v.S.numSubIntervalosError;
+    v.S.numSubIntervalosError=0;
+    set(handles.edit_subIntervalsForUncertainty, 'String', '0', 'Enable', 'off');
+end
+
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables

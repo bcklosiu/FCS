@@ -1,4 +1,4 @@
-function [FCSTraza, tTraza, cpscanal, FCSTrazaNorm, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
+function [FCSTraza, tTraza, cps, FCSTrazaNorm, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
 %
 %[FCSTraza, tTraza, cpscanal, meanFCStraza]=FCS_calculabinstraza(FCSData, deltaT, binTime)
 %   FCS_calculabinstraza es un rebinning de la traza para representarla
@@ -28,9 +28,9 @@ C_FCS_binning1(FCSTraza, FCSData, binning); %Este es el binning de Matlab que hi
 %         FCSTraza(nn, :)=sum(FCSData((nn-1)*binning+1:nn*binning, :));
 % end
 
-tTraza=linspace (binTime, numPuntosTraza*binTime, numPuntosTraza);
+tTraza=(1:numPuntosTraza)*binTime;
 tTraza=tTraza(:);
-cpscanal=round(sum(FCSData, 1)/max(tdatatemporal));
+cps=round(sum(FCSData, 1)/max(tdatatemporal));
 meanFCStraza=mean(FCSTraza);
 for canal=1:numCanales
     FCSTrazaNorm(:,canal)=FCSTraza(:,canal)/meanFCStraza(canal);
