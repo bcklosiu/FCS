@@ -59,11 +59,9 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior.
 
 variables.anaFCS_version='20Apr15'; %Esta es la versión del código
-variables.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
 
 variables.path=pwd;
 variables.pathSave='';
-variables.S=[];
 
 set(handles.edit_acquisitionTime, 'String', '');
 set(handles.edit_t0, 'String', '');
@@ -88,8 +86,18 @@ variables.allFigures=[variables.h_figIntervalos variables.h_figPromedio];
 set (variables.allFigures, 'NumberTitle' , 'off', 'Visible', 'off', 'DockControls', 'off', 'Color', [1 1 1])
 set (variables.allFigures, 'CloseRequestFcn', @FigCloseRequestFcn)
 
-
+%v son variables de la applicación
+%S es la estructura que contiene los datos de FCS
+%R es la estructura que contiene los datos raw de los fotones (B&H)
+S=struct();
+R=struct();
+S.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
+R.version=1;
+variables.scannerFreq=1400; %Por ahora en variables, hasta que decida qué hacer con ella
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
+setappdata (handles.figure1, 'S', S);  %Convierte variablesapl en datos de la aplicación con el nombre v
+setappdata (handles.figure1, 'R', R);  %Convierte variablesapl en datos de la aplicación con el nombre v
+
 
 % Choose default command line output for gui_anaFCS
 handles.output = hObject;
@@ -128,17 +136,21 @@ uiresume (handles.figure1) %Permite que se ejecute vargout
 % --- Executes on button press in pushbutton_loadCorrelationCurves.
 function pushbutton_loadCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+%S no la tiene que recuperar, porque la carga aquí
+
 [FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
 if ischar(FileName)
+    rmappdata (handles.figure1, 'S'); %Borra S como variable global para que no ocupe RAM mientras carga la siguiente
+    if isappdata (handles.figure1, 'R');
+        rmappdata (handles.figure1, 'R'); 
+    end
     set (handles.figure1,'Pointer','watch')
     drawnow update
-    v.R=struct([]);
-    v.S=struct([]);
     v.path=PathName;
-    v.S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
+    S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
         'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning');
     v.fname=[v.path FileName];
-    if v.S.isScanning
+    if S.isScanning
         macroTimeCol=4;
         microTimeCol=5;
         channelsCol=6;
@@ -147,30 +159,30 @@ if ischar(FileName)
         microTimeCol=2;
         channelsCol=3;
     end
-    if not(isfield(v.S, 'acqTime'))
-        v.S.acqTime=0;
+    if not(isfield(S, 'acqTime'))
+        S.acqTime=0;
     end
-    if not(isfield(v.S, 'intervalosPromediados')) %Para archivos viejos. Si no se indican los intervalos promediados, se promedian todos
-        v.S.intervalosPromediados=1:v.S.numIntervalos;
+    if not(isfield(S, 'intervalosPromediados')) %Para archivos viejos. Si no se indican los intervalos promediados, se promedian todos
+        S.intervalosPromediados=1:S.numIntervalos;
     end
     
-    %acqTime=v.S.photonArrivalTimes(end, macroTimeCol)+v.S.photonArrivalTimes(end, microTimeCol)-(v.S.photonArrivalTimes(1, macroTimeCol)+v.S.photonArrivalTimes(1, microTimeCol));
-    strAcqTime=sprintf('%3.2f', v.S.acqTime);
+    %acqTime=S.photonArrivalTimes(end, macroTimeCol)+S.photonArrivalTimes(end, microTimeCol)-(S.photonArrivalTimes(1, macroTimeCol)+S.photonArrivalTimes(1, microTimeCol));
+    strAcqTime=sprintf('%3.2f', S.acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
-    set(handles.edit_intervals, 'String', num2str(v.S.numIntervalos));
-    set(handles.edit_binningFrequency, 'String', num2str(v.S.binFreq/1E3));
-    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(v.S.numSubIntervalosError));
+    set(handles.edit_intervals, 'String', num2str(S.numIntervalos));
+    set(handles.edit_binningFrequency, 'String', num2str(S.binFreq/1E3));
+    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(S.numSubIntervalosError));
     set(handles.edit_subIntervalsForUncertainty, 'Enable', 'off');
     set(handles.radiobutton_averageSEM, 'Value', true)
-    if v.S.numSubIntervalosError
+    if S.numSubIntervalosError
         set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
         set (handles.radiobutton_subIntervalsSEM, 'Value', true)
     end
-    set(handles.edit_maximumTauLag, 'String', num2str(v.S.tauLagMax/1E-3));
-    set(handles.edit_sections, 'String', num2str(v.S.numSecciones));
-    set(handles.edit_base, 'String', num2str(v.S.base));
-    set(handles.edit_pointsPerSection, 'String', num2str(v.S.numPuntosSeccion));
-    switch lower(v.S.tipoCorrelacion)
+    set(handles.edit_maximumTauLag, 'String', num2str(S.tauLagMax/1E-3));
+    set(handles.edit_sections, 'String', num2str(S.numSecciones));
+    set(handles.edit_base, 'String', num2str(S.base));
+    set(handles.edit_pointsPerSection, 'String', num2str(S.numPuntosSeccion));
+    switch lower(S.tipoCorrelacion)
         case 'auto'
             set (handles.radiobutton_auto, 'Value', 1)
         otherwise
@@ -178,13 +190,13 @@ if ischar(FileName)
     end
     
     
-    for n=1:v.S.numIntervalos
-        [~, ~, v.h_figIntervalos]=FCS_representa (v.S.FCSintervalos(:,:,n), v.S.Gintervalos(:, :, n), 1/v.S.binFreq, v.S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
+    for n=1:S.numIntervalos
+        FCS_representa (S.FCSintervalos(:,:,n), S.Gintervalos(:, :, n), 1/S.binFreq, S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
     end
-    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.channel, v.h_figPromedio);
+    FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.channel, v.h_figPromedio);
     promedioString='';
-    for n=1:numel(v.S.intervalosPromediados)
-        promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+    for n=1:numel(S.intervalosPromediados)
+        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
     end
     promedioString=promedioString(1:end-2); %Le quito la última ', '
     set (v.allFigures, 'Visible', 'on')
@@ -195,19 +207,21 @@ if ischar(FileName)
     set (handles.figure1, 'Name' , ['anaFCS - ' nombreFCSData])
     set (handles.figure1,'Pointer','arrow')
     setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+    setappdata(handles.figure1, 'S', S); %Guarda S
 end
 
 
 % --- Executes on button press in pushbutton_plotCorrelationCurves.
 function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); 
 
 set (v.allFigures, 'Visible', 'on')
-gui_FCSrepresenta (v.S.FCSintervalos, v.S.Gintervalos, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figIntervalos)
-FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
+gui_FCSrepresenta (S.FCSintervalos, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
+FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
-for n=1:numel(v.S.intervalosPromediados)
-    promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+for n=1:numel(S.intervalosPromediados)
+    promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
 end
 promedioString=promedioString(1:end-2); %Le quito la última ', '
 set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
@@ -218,15 +232,15 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
 function edit_sections_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'numSecciones')
-    valorAnterior=v.S.numSecciones;
+if isfield (S, 'numSecciones')
+    valorAnterior=S.numSecciones;
 else
     valorAnterior=str2double(get(handles.edit_sections, 'String'));
 end
-v.S.numSecciones=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.numSecciones=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -235,15 +249,15 @@ function edit_sections_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_base_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'base')
-    valorAnterior=v.S.base;
+if isfield (S, 'base')
+    valorAnterior=S.base;
 else
     valorAnterior=str2double(get(handles.edit_base, 'String'));
 end
-v.S.base=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.base=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -252,30 +266,30 @@ function edit_base_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_pointsPerSection_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'numPuntosSeccion')
-    valorAnterior=v.S.numPuntosSeccion;
+if isfield (S, 'numPuntosSeccion')
+    valorAnterior=S.numPuntosSeccion;
 else
     valorAnterior=str2double(get(handles.edit_pointsPerSection, 'String'));
 end
-v.S.numPuntosSeccion=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.numPuntosSeccion=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 % --- Executes during object creation, after setting all properties.
 function edit_pointsPerSection_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_intervals_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'numIntervalos')
-    valorAnterior=v.S.numIntervalos;
+if isfield (S, 'numIntervalos')
+    valorAnterior=S.numIntervalos;
 else
     valorAnterior=str2double(get(handles.edit_intervals, 'String'));
 end
-v.S.numIntervalos=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.numIntervalos=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 % --- Executes during object creation, after setting all properties.
 function edit_intervals_CreateFcn(hObject, eventdata, handles)
@@ -283,15 +297,15 @@ function edit_intervals_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_binningFrequency_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'binFreq')
-    valorAnterior=v.S.binFreq/1E-3;
+if isfield (S, 'binFreq')
+    valorAnterior=S.binFreq/1E-3;
 else
     valorAnterior=str2double(get(handles.edit_binningFrequency, 'String'));
 end
-v.S.binFreq=1000*compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.binFreq=1000*compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -299,15 +313,15 @@ function edit_binningFrequency_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_maximumTauLag_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'tauLagMax')
-    valorAnterior=v.S.tauLagMax/1000;
+if isfield (S, 'tauLagMax')
+    valorAnterior=S.tauLagMax/1000;
 else
     valorAnterior=str2double(get(handles.edit_maximumTauLag, 'String'));
 end
-v.S.tauLagMax=compruebayactualizaedit(hObject, 0, Inf, valorAnterior)/1000;
-setappdata (handles.figure1, 'v', v);
+S.tauLagMax=compruebayactualizaedit(hObject, 0, Inf, valorAnterior)/1000;
+setappdata (handles.figure1, 'S', S);
 
 
 
@@ -317,15 +331,15 @@ function edit_maximumTauLag_CreateFcn(hObject, eventdata, handles)
 
 
 function edit_subIntervalsForUncertainty_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'numSubIntervalosError')
-    valorAnterior=v.S.numSubIntervalosError;
+if isfield (S, 'numSubIntervalosError')
+    valorAnterior=S.numSubIntervalosError;
 else
     valorAnterior=str2double(get(handles.edit_subIntervalsForUncertainty, 'String'));
 end
-v.S.numSubIntervalosError=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-setappdata (handles.figure1, 'v', v);
+S.numSubIntervalosError=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+setappdata (handles.figure1, 'S', S);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -406,17 +420,18 @@ end
 
 function edit_binningLines_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 
-if isfield (v.S, 'binLines')
-    valorAnterior=v.S.binLines;
+if isfield (S, 'binLines')
+    valorAnterior=S.binLines;
 else
     valorAnterior=str2double(get(handles.edit_binningLines, 'String'));
 end
-v.S.binLines=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
-v.S.binFreq=1400/v.S.binLines;
-strBinFreq=sprintf('%3.2f', v.S.binFreq/1000);
+S.binLines=compruebayactualizaedit(hObject, 0, Inf, valorAnterior);
+S.binFreq=v.scannerFreq/S.binLines;
+strBinFreq=sprintf('%3.2f', S.binFreq/1000);
 set (handles.edit_binningFrequency, 'String', strBinFreq)
-setappdata (handles.figure1, 'v', v);
+setappdata (handles.figure1, 'S', S);
 
 % --- Executes during object creation, after setting all properties.
 function edit_binningLines_CreateFcn(hObject, eventdata, handles)
@@ -434,23 +449,24 @@ end
 % --- Executes on button press in pushbutton_averageFCSCurves.
 function pushbutton_averageFCSCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); 
 
 answer=inputdlg('Average FCS curves: ', 'Average', 1);
 if not(isempty(answer))
     rangeString=answer{1};
-    endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
-    v.S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-    usaSubIntervalosError=logical(v.S.numSubIntervalosError);
-    [v.S.FCSmean v.S.Gmean]=FCS_promedio(v.S.Gintervalos, v.S.FCSintervalos, v.S.intervalosPromediados, usaSubIntervalosError);
-    [~, ~, v.h_figPromedio]=FCS_representa (v.S.FCSmean, v.S.Gmean, 1/v.S.binFreq, v.S.tipoCorrelacion, v.h_figPromedio);
+    endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+    S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
+    usaSubIntervalosError=logical(S.numSubIntervalosError);
+    [S.FCSmean S.Gmean]=FCS_promedio(S.Gintervalos, S.FCSintervalos, S.intervalosPromediados, usaSubIntervalosError);
+    FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
     promedioString='';
-    for n=1:numel(v.S.intervalosPromediados)
-        promedioString=[promedioString num2str(v.S.intervalosPromediados(n)), ', '];
+    for n=1:numel(S.intervalosPromediados)
+        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
     end
     promedioString=promedioString(1:end-2); %Le quito la última ', '
     set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
 end
-setappdata (handles.figure1, 'v', v);
+setappdata (handles.figure1, 'S', S);
 
 
 function cierraFigurasMalCerradas
@@ -466,8 +482,9 @@ close (h)
 % --- Executes on button press in pushbutton_fitIndividualCurves.
 function pushbutton_fitIndividualCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); 
 
-if v.S.isScanning
+if S.isScanning
     funStr='fitfcn_FCS_scanningTauD';
 else
     funStr='fitfcn_FCS_3DTauD';
@@ -475,29 +492,30 @@ end
 
 answer=inputdlg('Fit correlation curves: ', 'Choose curves to fit', 1);
 rangeString=answer{1};
-endPage=size (v.S.Gintervalos,3); %Esto debe ser igual que numIntervalos
-v.S.fittedCurves=pagerangeparser (rangeString, 1, endPage);
-for n=1:numel(v.S.fittedCurves)
-    dataFit(n)=mat2cell(v.S.Gintervalos(:,:,v.S.fittedCurves(n)));
+endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+S.fittedCurves=pagerangeparser (rangeString, 1, endPage);
+for n=1:numel(S.fittedCurves)
+    dataFit(n)=mat2cell(S.Gintervalos(:,:,S.fittedCurves(n)));
 end
 [allParam chi2 dataSetSelection fittingFunction Gmodel]=gui_FCSfit(dataFit, funStr, [], []);
 
-
+setappdata (handles.figure1, 'S', S);
 setappdata (handles.figure1, 'v', v);
 
 
 % --- Executes on button press in pushbutton_fitAverage.
 function pushbutton_fitAverage_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); 
 
-if v.S.isScanning
+if S.isScanning
     funStr='fitfcn_FCS_scanningTauD';
 else
     funStr='fitfcn_FCS_3DTauD';
 end
-[v.h_corrPromedio, v.h_resPromedio, ~, v.h_figPromedio]=FCS_representa_ajuste (v.S.FCSmean, v.S.Gmean, [], 1/v.S.binFreq, v.S.tipoCorrelacion, 1, v.h_figPromedio);
+[v.h_corrPromedio, v.h_resPromedio, ~, v.h_figPromedio]=FCS_representa_ajuste (S.FCSmean, S.Gmean, [], 1/S.binFreq, S.tipoCorrelacion, 1, v.h_figPromedio);
 
-[allParam chi2 dataSetSelection fittingFunction Gmodel]=gui_FCSfit({v.S.Gmean}, funStr, v.h_corrPromedio, v.h_resPromedio);
+[allParam chi2 dataSetSelection fittingFunction Gmodel]=gui_FCSfit({S.Gmean}, funStr, v.h_corrPromedio, v.h_resPromedio);
 
 setappdata (handles.figure1, 'v', v);
 
@@ -634,26 +652,30 @@ S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 % --------------------------------------------------------------------
 function menu_decodeRawData_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+
 [FileName,PathName, FilterIndex] = uigetfile({'*.spc'},'Choose the raw data file', v.path);
 set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(FileName)
     v.path=PathName;
-    v.R.rawFile=[PathName FileName];
+    R.rawFile=[PathName FileName];
     pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.R.rawFile(pos:end-4)];
+    nombreFCSData=['...' R.rawFile(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
-    [v.S.isScanning, v.R.photonArrivalTimes, v.R.TACrange, v.R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(v.R.rawFile);
-    if v.S.isScanning
-        v.R.imgDecode=imgDecode;
-        v.R.frameSync=frameSync;
-        v.R.lineSync=lineSync;
-        v.R.pixelSync=pixelSync;
+    rmappdata (handles.figure1, 'S'); %Hace espacio para las siguientes
+    rmappdata (handles.figure1, 'R');
+    [S.isScanning, R.photonArrivalTimes, R.TACrange, R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(R.rawFile);
+    if S.isScanning
+        R.imgDecode=imgDecode;
+        R.frameSync=frameSync;
+        R.lineSync=lineSync;
+        R.pixelSync=pixelSync;
     end
 end
 
 set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+setappdata(handles.figure1, 'v', R); %Guarda los cambios en variables
+setappdata(handles.figure1, 'v', S); 
 %[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
 %
 % Para point FCS
@@ -665,6 +687,7 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 % --------------------------------------------------------------------
 function menu_saveFCSAnalysis_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); %Recupera variables
 
 posName=find(v.fname=='\', 1, 'last')+1;
 fname=v.fname(posName:end);
@@ -678,8 +701,6 @@ drawnow update
 
 if fname
     disp (['Saving ' v.path fname])
-    S=v.S;
-    S=orderfields(S);
     if exist([v.path fname], 'file')
         save ([v.path fname], '-struct', 'S', '-append')
     else
@@ -692,19 +713,21 @@ set (handles.figure1,'Pointer','arrow')
 % --------------------------------------------------------------------
 function menu_saveForPyCorrFit_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 set (handles.figure1,'Pointer','watch')
 drawnow update
-%FCS_savePyCorrformat(v.S.Gintervalos, v.S.FCSintervalos, v.S.binFreq, [v.path v.S.fname]);
-FCS_savePyCorrformat(v.S.Gmean, v.S.FCSmean, v.S.binFreq, [v.path v.S.fname]);
+%FCS_savePyCorrformat(S.Gintervalos, S.FCSintervalos, S.binFreq, [v.path S.fname]);
+FCS_savePyCorrformat(S.Gmean, S.FCSmean, S.binFreq, [v.path S.fname]);
 set (handles.figure1,'Pointer','arrow')
 
 
 % --------------------------------------------------------------------
 function menu_saveAsASCII_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v');
+S=getappdata (handles.figure1, 'S');
 set (handles.figure1,'Pointer','watch')
 drawnow update
-FCS_G2ASCII (v.fname, v.S.channel, v.S.intervalosPromediados, v.S.Gmean);
+FCS_G2ASCII (v.fname, S.channel, S.intervalosPromediados, S.Gmean);
 set (handles.figure1,'Pointer','arrow')
 drawnow update
 disp ('OK')
@@ -744,10 +767,9 @@ if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
     v.fname=[v.path FileName];
-    scannerFreq=1400;
-    v.R=struct([]); %Libera memoria antes de cargar matrices inmensas
-    v.S=struct([]);
-    [v.S v.R]=loadrawFCSdata(v.fname, scannerFreq, handles);
+    rmappdata (handles.figure1, 'S');
+    rmappdata (handles.figure1, 'R');
+    [S R]=loadrawFCSdata(v.fname, v.scannerFreq, handles);
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
@@ -756,16 +778,20 @@ end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+setappdata(handles.figure1, 'R', R); 
+setappdata(handles.figure1, 'S', S); 
 
 % --------------------------------------------------------------------
 function menu_computecorrelation_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); %Recupera variables
+R=getappdata (handles.figure1, 'R'); %Recupera variables
+
 set (handles.figure1,'Pointer','watch')
 drawnow update
-v.S=computecorrelation (v.S, v.R, handles);
+S=computecorrelation (S, R, handles);
 disp ('OK')
 set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+setappdata(handles.figure1, 'S', S); %Guarda los cambios en variables
 
 
 % --------------------------------------------------------------------
@@ -785,10 +811,9 @@ if ischar(pathName)
         disp ([num2str(numFiles+1-n) ' files left'])
         fname=d(n).name;
         disp (['Loading ' v.path fname])
-        scannerFreq=1400;
         R=struct([]); %Libera memoria antes de cargar matrices inmensas
         S=struct([]);
-        [S R]=loadrawFCSdata([v.path fname], scannerFreq, handles);
+        [S R]=loadrawFCSdata([v.path fname], v.scannerFreq, handles);
         S=computecorrelation (S, R, handles);
         S=orderfields(S);
         fname=[fname(1:end-8) nameTail '.mat'];
@@ -809,6 +834,8 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 % --------------------------------------------------------------------
 function menu_batchDecode_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); %Recupera variables
+
 pathName = uigetdirJava(v.path, 'Choose folder');
 set (handles.figure1,'Pointer','watch')
 drawnow update
@@ -820,18 +847,18 @@ if ischar(pathName)
     for n=1:numFiles;
         disp ([num2str(numFiles+1-n) ' files left'])
         fileName=d(n).name;
-        v.S.rawFile=[v.path fileName];
+        S.rawFile=[v.path fileName];
         pos=find(v.path=='\', 2, 'last');
-        nombreFCSData=['...' v.S.rawFile(pos:end-4)];
+        nombreFCSData=['...' S.rawFile(pos:end-4)];
         set (handles.figure1, 'Name' , nombreFCSData)
-        FCS_load(v.S.rawFile);
+        FCS_load(S.rawFile);
     end
     disp ('Finished decoding')
 end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
+setappdata(handles.figure1, 'S', S); 
 
 
 % --- Executes when selected object is changed in uipanel_uncertainty.
@@ -843,17 +870,18 @@ function uipanel_uncertainty_SelectionChangeFcn(hObject, eventdata, handles)
 %	NewValue: handle of the currently selected object
 % handles    structure with handles and user data (see GUIDATA)
 
-v=getappdata (handles.figure1, 'v'); %Recupera variables
+vv=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S'); 
 
 if get(handles.radiobutton_subIntervalsSEM, 'Value')
-    v.S.numSubIntervalosError=v.numSubIntervalosError_anterior;
-    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(v.S.numSubIntervalosError));
+    S.numSubIntervalosError=v.numSubIntervalosError_anterior;
+    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(S.numSubIntervalosError));
     set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
 end
 if get(handles.radiobutton_averageSEM, 'Value')
-    v.numSubIntervalosError_anterior=v.S.numSubIntervalosError;
-    v.S.numSubIntervalosError=0;
+    v.numSubIntervalosError_anterior=S.numSubIntervalosError;
+    S.numSubIntervalosError=0;
     set(handles.edit_subIntervalsForUncertainty, 'String', '0', 'Enable', 'off');
 end
 
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+setappdata(handles.figure1, 'S', S); %Guarda los cambios en variables
