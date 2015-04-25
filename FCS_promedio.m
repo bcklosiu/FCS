@@ -32,9 +32,6 @@ function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, usaSubI
 % jri - 20abr15 Cambio el tipocorrelacion
 % jri - 24Abr15 Cálculo del error estándar de la media a partir de las curvas con las que se hace el promedio
 
-if not(isfloat(Mtotal))
-    Mtotal=double(Mtotal);
-end
 
 indices=zeros(1, size (FCSintervalo,3));
 indices(combinacion)=1;
@@ -57,7 +54,7 @@ if size(Gmean,2)==7
     if usaSubIntervalosError
         Gmean(:,5)=sqrt (sum (Mtotal(:,5, indices).^2,3))/numCurvasPromediadas;   %Suma cuadrática de los errores
         Gmean(:,7)=sqrt (sum (Mtotal(:,7, indices).^2,3))/numCurvasPromediadas;
-    else
+    elseif numCurvasPromediadas>1 
         Gmean(:,5)=stderrG(squeeze(Gmean(:,4)), squeeze(Mtotal(:,4, indices)), numCurvasPromediadas);
         Gmean(:,7)=stderrG(squeeze(Gmean(:,6)), squeeze(Mtotal(:,6, indices)), numCurvasPromediadas);
     end

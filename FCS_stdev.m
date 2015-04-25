@@ -27,21 +27,20 @@ function M= FCS_stdev (FCSData, numSubIntervalosError, deltaT, numSecciones, num
 
 numData=size(FCSData,1);
 numCanales=size(FCSData, 2); %Si hay dos canales calcula también la correlación cruzada
-
-numColumnasG=3; %Autocorrelación: G=[tdata, G, SD]
+%Si hay dos canales hace la correlación cruzada automáticamente
 if numCanales>1
-    numColumnasG=7; %Correlación cruzada: G=[tdata, G_ch1, SD_ch1, G_ch2, SD_ch2, Gcc, SDcc]
+    numCanales=3; %Dos canales más la correlación cruzada
 end
 
 [G tdatacorr]= FCS_multitau (FCSData, deltaT, numSecciones, numPuntos, base, tLagMax);
 numPuntosCorrelacion=size(G, 1);
 
-SD=zeros(numPuntosCorrelacion, numColumnasG);
-SE=zeros(numPuntosCorrelacion, numColumnasG);
+SD=zeros(numPuntosCorrelacion, numCanales);
+SE=zeros(numPuntosCorrelacion, numCanales);
 %Cálculo de SD a partir de la correlación de subintervalos. Si no SD=0 en todas las filas.
 if numSubIntervalosError
     G_k=zeros(numSubIntervalosError, numPuntosCorrelacion, numCanales);
-    gk_mean= zeros(numPuntosCorrelacion, numColumnasG); %La G de cada subIntervaloError promediada
+    gk_mean= zeros(numPuntosCorrelacion, numCanales); %La G de cada subIntervaloError promediada
     %Ahora divido cada intervalo en numSubIntervalosError trozos y calculo las subcorrelaciones 
     intervalo=floor(numData./numSubIntervalosError);
     for k=1:numSubIntervalosError

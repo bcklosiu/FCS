@@ -29,7 +29,11 @@ numData=size(FCSData, 1);
 %Hace la correlación
 
 numCanales=size(FCSData, 2);
-G=zeros (numPuntosCorrFinal, 1);
+if numCanales>1 %Si hay dos canales hace la correlación cruzada automáticamente
+    numCanales=3; %Dos canales más la correlación cruzada
+end
+    
+G=zeros (numPuntosCorrFinal, numCanales);
 tdata_corr=zeros(numPuntosCorrFinal, 1);
 
 tdata=tdataTodos(indicesNOrepe);
