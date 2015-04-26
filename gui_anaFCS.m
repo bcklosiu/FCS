@@ -142,7 +142,7 @@ v=getappdata (handles.figure1, 'v'); %Recupera variables
 if ischar(FileName)
     rmappdata (handles.figure1, 'S'); %Borra S como variable global para que no ocupe RAM mientras carga la siguiente
     if isappdata (handles.figure1, 'R');
-        rmappdata (handles.figure1, 'R'); 
+        rmappdata (handles.figure1, 'R');
     end
     set (handles.figure1,'Pointer','watch')
     drawnow update
@@ -214,7 +214,7 @@ end
 % --- Executes on button press in pushbutton_plotCorrelationCurves.
 function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S'); 
+S=getappdata (handles.figure1, 'S');
 
 set (v.allFigures, 'Visible', 'on')
 gui_FCSrepresenta (S.FCSintervalos, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
@@ -449,7 +449,7 @@ end
 % --- Executes on button press in pushbutton_averageFCSCurves.
 function pushbutton_averageFCSCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S'); 
+S=getappdata (handles.figure1, 'S');
 
 answer=inputdlg('Average FCS curves: ', 'Average', 1);
 if not(isempty(answer))
@@ -482,7 +482,7 @@ close (h)
 % --- Executes on button press in pushbutton_fitIndividualCurves.
 function pushbutton_fitIndividualCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S'); 
+S=getappdata (handles.figure1, 'S');
 
 if S.isScanning
     funStr='fitfcn_FCS_scanningTauD';
@@ -506,7 +506,7 @@ setappdata (handles.figure1, 'v', v);
 % --- Executes on button press in pushbutton_fitAverage.
 function pushbutton_fitAverage_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S'); 
+S=getappdata (handles.figure1, 'S');
 
 if S.isScanning
     funStr='fitfcn_FCS_scanningTauD';
@@ -675,7 +675,7 @@ end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', R); %Guarda los cambios en variables
-setappdata(handles.figure1, 'v', S); 
+setappdata(handles.figure1, 'v', S);
 %[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
 %
 % Para point FCS
@@ -768,7 +768,9 @@ if ischar(FileName)
     disp (['Loading ' FileName])
     v.fname=[v.path FileName];
     rmappdata (handles.figure1, 'S');
-    rmappdata (handles.figure1, 'R');
+    if isappdata (handles.figure1, 'R')
+        rmappdata (handles.figure1, 'R');
+    end
     [S R]=loadrawFCSdata(v.fname, v.scannerFreq, handles);
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
@@ -778,8 +780,8 @@ end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-setappdata(handles.figure1, 'R', R); 
-setappdata(handles.figure1, 'S', S); 
+setappdata(handles.figure1, 'R', R);
+setappdata(handles.figure1, 'S', S);
 
 % --------------------------------------------------------------------
 function menu_computecorrelation_Callback(hObject, eventdata, handles)
@@ -858,7 +860,7 @@ end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-setappdata(handles.figure1, 'S', S); 
+setappdata(handles.figure1, 'S', S);
 
 
 % --- Executes when selected object is changed in uipanel_uncertainty.
@@ -871,7 +873,7 @@ function uipanel_uncertainty_SelectionChangeFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 vv=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S'); 
+S=getappdata (handles.figure1, 'S');
 
 if get(handles.radiobutton_subIntervalsSEM, 'Value')
     S.numSubIntervalosError=v.numSubIntervalosError_anterior;

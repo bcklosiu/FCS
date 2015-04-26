@@ -31,11 +31,11 @@ function [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, usaSubI
 % jri - 2Feb15 Quito deltat porque no lo usamos. Antes era: [FCSmean Gmean]=FCS_promedio(Mtotal, FCSintervalo, combinacion, deltat, tipocorrelacion);
 % jri - 20abr15 Cambio el tipocorrelacion
 % jri - 24Abr15 Cálculo del error estándar de la media a partir de las curvas con las que se hace el promedio
+% jri - 26Apr15 Hago la función del cálculo del error una función externa
 
 
-indices=zeros(1, size (FCSintervalo,3));
-indices(combinacion)=1;
-indices=logical(indices);
+indices=false(1, size (FCSintervalo,3));
+indices(combinacion)=true;
 FCSmean=mean(FCSintervalo (:, : , indices),3);
 numPuntosCorrelacion=size(Mtotal, 1);
 Gmean=zeros(numPuntosCorrelacion, size(Mtotal, 2));
@@ -46,7 +46,7 @@ Gmean(:,2)=mean (Mtotal(:,2, indices),3);
 if usaSubIntervalosError %Usa el SEM de los subintervalos para calcular la SEM de la traza promedio
     Gmean(:,3)=sqrt (sum (Mtotal(:,3, indices).^2,3))/numel(combinacion);   %Suma cuadrática de los errores
 else %Si no usa cada uno de los intervalos
-    Gmean(:,3)=stderrG(squeeze(Gmean(:,2)), squeeze(Mtotal(:,2, indices)), numCurvasPromediadas);
+    Gmean(:,3)=FCS_stderrG(Gmean(:,2), Mtotal(:,2, indices));
 end
 if size(Gmean,2)==7
     Gmean(:,4)=mean (Mtotal(:,4, indices),3);
@@ -55,16 +55,8 @@ if size(Gmean,2)==7
         Gmean(:,5)=sqrt (sum (Mtotal(:,5, indices).^2,3))/numCurvasPromediadas;   %Suma cuadrática de los errores
         Gmean(:,7)=sqrt (sum (Mtotal(:,7, indices).^2,3))/numCurvasPromediadas;
     elseif numCurvasPromediadas>1 
-        Gmean(:,5)=stderrG(squeeze(Gmean(:,4)), squeeze(Mtotal(:,4, indices)), numCurvasPromediadas);
-        Gmean(:,7)=stderrG(squeeze(Gmean(:,6)), squeeze(Mtotal(:,6, indices)), numCurvasPromediadas);
+        Gmean(:,5)=FCS_stderrG(Gmean(:,4), Mtotal(:,4, indices));
+        Gmean(:,7)=FCS_stderrG(Gmean(:,6), Mtotal(:,6, indices));
     end
 end
 
-function SE=stderrG (Gpromedio, Gintervalos, numCurvasPromediadas)
-%Calcula el error estándar de la media de Gintervalos
-numPuntosCorrelacion=size(Gpromedio, 1);
-SD=zeros(numPuntosCorrelacion, 1);
-for tau=1:numPuntosCorrelacion
-    SD(tau)=sqrt(sum((Gintervalos(tau, :)-Gpromedio(tau)).^2)/(numCurvasPromediadas-1));
-end
-SE=SD/sqrt(numCurvasPromediadas);
