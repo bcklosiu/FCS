@@ -727,7 +727,7 @@ v=getappdata (handles.figure1, 'v');
 S=getappdata (handles.figure1, 'S');
 set (handles.figure1,'Pointer','watch')
 drawnow update
-FCS_G2ASCII (v.fname, S.channel, S.intervalosPromediados, S.Gmean);
+FCS_save2ASCII (v.fname, S.channel, S.intervalosPromediados, S.Gmean);
 set (handles.figure1,'Pointer','arrow')
 drawnow update
 disp ('OK')
@@ -748,7 +748,7 @@ if ischar(pathName)
         fname=d(n).name;
         disp (['Loading ' v.path fname])
         S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean', 'tipoCorrelacion');
-        FCS_G2ASCII ([v.path fname], S.channel, S.intervalosPromediados, S.Gmean, S.tipoCorrelacion);
+        FCS_save2ASCII ([v.path fname], S.channel, S.intervalosPromediados, S.Gmean, S.tipoCorrelacion);
         disp ('OK')
     end
     disp ('Finished converting to ASCII')

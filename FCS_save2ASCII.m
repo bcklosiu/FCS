@@ -1,10 +1,18 @@
-function fid=FCS_G2ASCII (fileName, channel, intervalosPromediados, Gmean, tipoCorrelacion)
+function fid=FCS_save2ASCII (fileName, channel, intervalosPromediados, Gmean, tipoCorrelacion)
 %
 % Guarda la correlación promedio en formato ASCII
 % fileName incluye el path
 % jri 23Abr15
 
-fileName=[fileName(1:end-4) '.dat'];
+
+if strcmp(fileName(end-4:end), '.mat')
+    fileName=[fileName(1:end-4) '.dat'];
+elseif not(strcmp(fileName(end-4:end), '.dat'))
+    fileName=[fileName '.dat'];
+end
+
+
+
 pos=find(fileName=='\', 1, 'last');
 if isempty(pos)
     pos=0;
