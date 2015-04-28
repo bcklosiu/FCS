@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 24-Apr-2015 22:38:07
+% Last Modified by GUIDE v2.5 28-Apr-2015 16:47:25
 
 % Begin initialization code - DO NOT EDIT
 
@@ -58,7 +58,7 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior.
 
-variables.anaFCS_version='20Apr15'; %Esta es la versión del código
+variables.anaFCS_version='28Apr15'; %Esta es la versión del código
 
 variables.path=pwd;
 variables.pathSave='';
@@ -89,15 +89,13 @@ set (variables.allFigures, 'CloseRequestFcn', @FigCloseRequestFcn)
 %v son variables de la applicación
 %S es la estructura que contiene los datos de FCS
 %R es la estructura que contiene los datos raw de los fotones (B&H)
-S=struct();
-R=struct();
-S.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
-R.version=1;
+
+S=inicializavariables();
 variables.scannerFreq=1400; %Por ahora en variables, hasta que decida qué hacer con ella
+R=struct();
 setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
 setappdata (handles.figure1, 'S', S);  %Convierte variablesapl en datos de la aplicación con el nombre v
 setappdata (handles.figure1, 'R', R);  %Convierte variablesapl en datos de la aplicación con el nombre v
-
 
 % Choose default command line output for gui_anaFCS
 handles.output = hObject;
@@ -148,7 +146,7 @@ if ischar(FileName)
     drawnow update
     v.path=PathName;
     S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
-        'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'FCSmean', 'Gmean', 'isScanning');
+        'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'Gmean', 'isScanning');
     v.fname=[v.path FileName];
     if S.isScanning
         macroTimeCol=4;
@@ -193,7 +191,7 @@ if ischar(FileName)
     for n=1:S.numIntervalos
         FCS_representa (S.FCSintervalos(:,:,n), S.Gintervalos(:, :, n), 1/S.binFreq, S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
     end
-    FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.channel, v.h_figPromedio);
+    FCS_representa2 (S.Gmean, S.channel, v.h_figPromedio);
     promedioString='';
     for n=1:numel(S.intervalosPromediados)
         promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
@@ -218,7 +216,7 @@ S=getappdata (handles.figure1, 'S');
 
 set (v.allFigures, 'Visible', 'on')
 gui_FCSrepresenta (S.FCSintervalos, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
-FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
+FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
 for n=1:numel(S.intervalosPromediados)
     promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
@@ -457,8 +455,10 @@ if not(isempty(answer))
     endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
     S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
     usaSubIntervalosError=logical(S.numSubIntervalosError);
-    [S.FCSmean S.Gmean]=FCS_promedio(S.Gintervalos, S.FCSintervalos, S.intervalosPromediados, usaSubIntervalosError);
-    FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
+%    S.FCSmean=mean(S.FCSintervalos (:, : , S.intervalosPromediados),3);
+    S.Gmean=FCS_promedio(S.Gintervalos, S.FCSintervalos, S.intervalosPromediados, usaSubIntervalosError);
+%   FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
+    FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
     promedioString='';
     for n=1:numel(S.intervalosPromediados)
         promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
@@ -548,11 +548,13 @@ set (hObject, 'Visible', 'off')
 
 
 
-function [S R]=loadrawFCSdata(fname, scannerFreq, handles)
+function [S R]=loadrawphotondata(fname, scannerFreq, handles)
 %fname debe llevar el path
 %S contiene los datos que guardaremos en el archivo .mat
 %R contiene los datos raw con los que opera
-S=load (fname, 'isScanning');
+load (fname, 'isScanning');
+S=inicializavariables();
+S.isScanning=isScanning;
 if S.isScanning
     disp ('Scanning FCS experiment')
     R=load (fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'imgDecode', 'lineSync', 'pixelSync');
@@ -598,7 +600,8 @@ set(handles.edit_acquisitionTime, 'String', strAcqTime);
 
 function [S FCS_intervalos]=computecorrelation (S_in, R, handles)
 
-S=S_in;
+S=S_in; %Aquí S es todavía pequeña, así que podemos duplicarla sin problemas
+
 if S.isScanning
     macroTimeCol=4;
     microTimeCol=5;
@@ -631,21 +634,31 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 disp ('Computing correlation')
 tic;
+S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 if S.isScanning
-    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.cps, S.tData, S.binFreq]=...
+    [S.FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, S.tData, S.binFreq]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
         R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
     strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
     set (handles.edit_binningFrequency, 'String', strBinFreq);
 else
-    [S.FCSintervalos, S.Gintervalos, S.FCSmean, S.Gmean, S.cps, S.tData]=...
+    [S.FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, S.tData]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
     %Esto para cada intervalo
     %[S.FCSTraza, S.tTraza]=FCS_calculabinstraza(FCSData, deltaT, 0.01);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
-S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
+
+if S.correctAP
+    %Si se corrige el afterpulsing (AP) Gmean se convierte en la corregida y las no corregidas _noAP 
+    S.Gmean_noAP=S.Gmean;
+    S.Gintervalos_noAP=S.Gintervalos;
+    for intervalo=1:S.numIntervalos
+        [S.Gintervalos(:,:,intervalo) S.alfa]=FCS_afterpulsing (S.Gintervalos_noAP(:, :, intervalo), S.cpsIntervalos(intervalo,:), S.tau_AP(:,S.channel), S.alfaCoeff(:,S.channel));
+    end
+    S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, logical(S.numSubIntervalosError));
+end
 
 
 
@@ -664,6 +677,7 @@ if ischar(FileName)
     set (handles.figure1, 'Name' , nombreFCSData)
     rmappdata (handles.figure1, 'S'); %Hace espacio para las siguientes
     rmappdata (handles.figure1, 'R');
+    S=inicializavariables();
     [S.isScanning, R.photonArrivalTimes, R.TACrange, R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(R.rawFile);
     if S.isScanning
         R.imgDecode=imgDecode;
@@ -717,7 +731,7 @@ S=getappdata (handles.figure1, 'S');
 set (handles.figure1,'Pointer','watch')
 drawnow update
 %FCS_savePyCorrformat(S.Gintervalos, S.FCSintervalos, S.binFreq, [v.path S.fname]);
-FCS_savePyCorrformat(S.Gmean, S.FCSmean, S.binFreq, [v.path S.fname]);
+FCS_savePyCorrformat(S.Gmean, S.binFreq, [v.path S.fname]);
 set (handles.figure1,'Pointer','arrow')
 
 
@@ -758,7 +772,7 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
 % --------------------------------------------------------------------
-function menu_loadRawFCSData_Callback(hObject, eventdata, handles)
+function menu_loadRawPhotonData_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 [FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
 set (handles.figure1,'Pointer','watch')
@@ -771,23 +785,25 @@ if ischar(FileName)
     if isappdata (handles.figure1, 'R')
         rmappdata (handles.figure1, 'R');
     end
-    [S R]=loadrawFCSdata(v.fname, v.scannerFreq, handles);
+    [S R]=loadrawphotondata(v.fname, v.scannerFreq, handles);
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['anaFCS - ...' v.fname(pos:end-4)];
     set (handles.figure1, 'Name' , nombreFCSData)
+    setappdata(handles.figure1, 'R', R);
+    setappdata(handles.figure1, 'S', S);
     disp ('OK')
 end
 
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-setappdata(handles.figure1, 'R', R);
-setappdata(handles.figure1, 'S', S);
+
 
 % --------------------------------------------------------------------
 function menu_computecorrelation_Callback(hObject, eventdata, handles)
 S=getappdata (handles.figure1, 'S'); %Recupera variables
 R=getappdata (handles.figure1, 'R'); %Recupera variables
-
+[S.tau_AP S.alfaCoeff S.correctAP]=gui_FCSafterpulsing(S.tau_AP, S.alfaCoeff);
+drawnow update
 set (handles.figure1,'Pointer','watch')
 drawnow update
 S=computecorrelation (S, R, handles);
@@ -799,10 +815,13 @@ setappdata(handles.figure1, 'S', S); %Guarda los cambios en variables
 % --------------------------------------------------------------------
 function menu_batchCorrelate_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
-pathName = uigetdirJava(v.path, 'Choose folder');
+S=getappdata (handles.figure1, 'S'); %Para los valores iniciales, etc
+
+pathName = uigetdirJava(v.path, 'Choose folder with raw photon data');
 if ischar(pathName)
     answer=inputdlg('Enter name tail that will be added to the filename', 'Filename');
     nameTail=['_' answer{1}];
+    [tau_AP alfaCoeff correctAP]=gui_FCSafterpulsing(S.tau_AP, S.alfaCoeff);
     set (handles.figure1,'Pointer','watch')
     drawnow update
     v.path=[pathName '\'];
@@ -813,11 +832,11 @@ if ischar(pathName)
         disp ([num2str(numFiles+1-n) ' files left'])
         fname=d(n).name;
         disp (['Loading ' v.path fname])
-        R=struct([]); %Libera memoria antes de cargar matrices inmensas
-        S=struct([]);
-        [S R]=loadrawFCSdata([v.path fname], v.scannerFreq, handles);
+        [S R]=loadrawphotondata([v.path fname], v.scannerFreq, handles);
+        S.correctAP=correctAP;
+        S.tau_AP=tau_AP;
+        S.alfaCoeff=alfaCoeff;
         S=computecorrelation (S, R, handles);
-        S=orderfields(S);
         fname=[fname(1:end-8) nameTail '.mat'];
         disp(['Saving ' v.path fname])
         if exist([v.path fname], 'file')
@@ -825,6 +844,8 @@ if ischar(pathName)
         else
             save ([v.path fname], '-struct', 'S')
         end
+        R=struct([]); %Libera memoria al acabar
+        S=struct([]);
         disp ('OK')
     end
     disp ('Finished correlating')
@@ -872,7 +893,7 @@ function uipanel_uncertainty_SelectionChangeFcn(hObject, eventdata, handles)
 %	NewValue: handle of the currently selected object
 % handles    structure with handles and user data (see GUIDATA)
 
-vv=getappdata (handles.figure1, 'v'); %Recupera variables
+v=getappdata (handles.figure1, 'v'); %Recupera variables
 S=getappdata (handles.figure1, 'S');
 
 if get(handles.radiobutton_subIntervalsSEM, 'Value')
@@ -887,3 +908,21 @@ if get(handles.radiobutton_averageSEM, 'Value')
 end
 
 setappdata(handles.figure1, 'S', S); %Guarda los cambios en variables
+
+
+% --- Executes on button press in pushbutton_correctForAfterpulsing.
+function pushbutton_correctForAfterpulsing_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S');
+fname
+[S.tau_AP,S.alfaCoeff]=gui_FCSafterpulsing;
+[S.G_AP S.alfa]=FCS_afterpulsing (S.Gmean, S.cps, S.tau_AP, S.alfaCoeff);
+%save 
+
+setappdata(handles.figure1, 'S', S); %Guarda los cambios en variabl
+
+function S=inicializavariables()
+S.tau_AP=[];
+S.alfaCoeff=[];
+S.correctAP=false;
+S.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.

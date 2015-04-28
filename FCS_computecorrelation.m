@@ -45,6 +45,7 @@ function varargout=FCS_computecorrelation (varargin)
 % jri 25Nov14
 % jri 22Ene15 - Corrijo el deltaTbin, que faltaba para el point-FCS
 % jri 24Abr15 - Añado las cuentas por segundo y corrijo tData para que sea el t de los FCSintervalos y no el de FCSData
+% jri 28Apr15 - Añado cps por intervalo y ambio FCS promedio para que FCSmean la calcule fuera de FCSpromedio
 
 
 photonArrivalTimes=varargin{1};
@@ -114,15 +115,17 @@ disp(['Correlating ' num2str(size(FCSData, 2)) ' channels'])
 FCSintervalos= FCS_troceador(FCSData, numIntervalos);
 Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
 usaSubIntervalosError=logical(numSubIntervalosError); %Si numSubIntervalosError>0 entonces usa los subIntervalos para calcular la incertidumbre
-[FCSmean Gmean]=FCS_promedio(Gintervalos, FCSintervalos, 1:numIntervalos, usaSubIntervalosError);
+Gmean=FCS_promedio(Gintervalos, 1:numIntervalos, usaSubIntervalosError);
 
 numData=size(FCSData,1);
+numDataIntervalos=size(FCSintervalos,1);
 cps=round(sum(FCSData)/(numData*deltaTBin));
+cpsIntervalos=round(squeeze(sum(FCSintervalos, 1))/(numDataIntervalos*deltaTBin));
 tData=(1:numData)*deltaTBin;
 
 if isScanning
-    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData, binFreq};
+    varargout={FCSintervalos, Gintervalos, Gmean, cps, cpsIntervalos, tData, binFreq};
 else
-    varargout={FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData};
+    varargout={FCSintervalos, Gintervalos, Gmean, cps, cpsIntervalos, tData};
 end
 
