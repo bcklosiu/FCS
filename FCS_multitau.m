@@ -20,6 +20,9 @@ function [G tdata]= FCS_multitau (FCSData, deltaT, numSecciones, numPuntosSeccio
 % jri - 20Apr15 Quito los puntos que repite al calcular la correlación
 % jri - 20Apr15 Quito tipoCorrelacio. Si FCSData tiene dos canales hace también la correlación cruzada
 
+if not(isfloat(FCSData))
+    FCSData=double(FCSData);
+end
 
 numData=size(FCSData, 1);
 

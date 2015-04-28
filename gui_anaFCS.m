@@ -146,7 +146,7 @@ if ischar(FileName)
     drawnow update
     v.path=PathName;
     S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
-        'intervalosPromediados', 'FCSintervalos', 'Gintervalos', 'Gmean', 'isScanning');
+        'intervalosPromediados', 'Gintervalos', 'Gmean', 'isScanning', 'cps');
     v.fname=[v.path FileName];
     if S.isScanning
         macroTimeCol=4;
@@ -189,7 +189,7 @@ if ischar(FileName)
     
     
     for n=1:S.numIntervalos
-        FCS_representa (S.FCSintervalos(:,:,n), S.Gintervalos(:, :, n), 1/S.binFreq, S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
+        FCS_representa (S.FCSTraza(:,:,n), S.Gintervalos(:, :, n), 1/S.binFreq, S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
     end
     FCS_representa2 (S.Gmean, S.channel, v.h_figPromedio);
     promedioString='';
@@ -215,7 +215,7 @@ v=getappdata (handles.figure1, 'v'); %Recupera variables
 S=getappdata (handles.figure1, 'S');
 
 set (v.allFigures, 'Visible', 'on')
-gui_FCSrepresenta (S.FCSintervalos, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
+gui_FCSrepresenta (S.FCSTraza, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
 FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
 promedioString='';
 for n=1:numel(S.intervalosPromediados)
@@ -455,8 +455,8 @@ if not(isempty(answer))
     endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
     S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
     usaSubIntervalosError=logical(S.numSubIntervalosError);
-%    S.FCSmean=mean(S.FCSintervalos (:, : , S.intervalosPromediados),3);
-    S.Gmean=FCS_promedio(S.Gintervalos, S.FCSintervalos, S.intervalosPromediados, usaSubIntervalosError);
+%    S.FCSmean=mean(F.FCSintervalos (:, : , S.intervalosPromediados),3);
+    S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, usaSubIntervalosError);
 %   FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
     FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
     promedioString='';
@@ -598,7 +598,7 @@ strAcqTime=sprintf('%3.2f', S.acqTime);
 set(handles.edit_acquisitionTime, 'String', strAcqTime);
 %    save ([path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
 
-function [S FCS_intervalos]=computecorrelation (S_in, R, handles)
+function S=computecorrelation (S_in, R, handles)
 
 S=S_in; %Aquí S es todavía pequeña, así que podemos duplicarla sin problemas
 
@@ -636,20 +636,28 @@ disp ('Computing correlation')
 tic;
 S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 if S.isScanning
-    [S.FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, S.tData, S.binFreq]=...
+    [FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~, S.binFreq]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
         R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
     strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
     set (handles.edit_binningFrequency, 'String', strBinFreq);
 else
-    [S.FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, S.tData]=...
+    [FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
-    %Esto para cada intervalo
-    %[S.FCSTraza, S.tTraza]=FCS_calculabinstraza(FCSData, deltaT, 0.01);
+end
+%Calculo las trazas para representar
+binTimeTraza=0.01; %Las trazas para representar las hago de 0.01s
+tplot=size(FCSintervalos, 1)/S.binFreq;
+numPuntosTraza=floor(tplot/binTimeTraza);
+numCanales=size(FCSintervalos, 2);
+S.FCSTraza=zeros(numPuntosTraza, numCanales);
+for intervalo=1:S.numIntervalos
+    [S.FCSTraza(:,:,intervalo), S.tTraza]=FCS_calculabinstraza(FCSintervalos(:,:,intervalo), 1/S.binFreq, binTimeTraza);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
 
+%Corrijo el afterpulsing
 if S.correctAP
     %Si se corrige el afterpulsing (AP) Gmean se convierte en la corregida y las no corregidas _noAP 
     S.Gmean_noAP=S.Gmean;
@@ -730,7 +738,7 @@ v=getappdata (handles.figure1, 'v');
 S=getappdata (handles.figure1, 'S');
 set (handles.figure1,'Pointer','watch')
 drawnow update
-%FCS_savePyCorrformat(S.Gintervalos, S.FCSintervalos, S.binFreq, [v.path S.fname]);
+%FCS_savePyCorrformat(S.Gintervalos, F.FCSintervalos, S.binFreq, [v.path S.fname]);
 FCS_savePyCorrformat(S.Gmean, S.binFreq, [v.path S.fname]);
 set (handles.figure1,'Pointer','arrow')
 
@@ -805,12 +813,10 @@ R=getappdata (handles.figure1, 'R'); %Recupera variables
 [S.tau_AP S.alfaCoeff S.correctAP]=gui_FCSafterpulsing(S.tau_AP, S.alfaCoeff);
 drawnow update
 set (handles.figure1,'Pointer','watch')
-drawnow update
 S=computecorrelation (S, R, handles);
 disp ('OK')
 set (handles.figure1,'Pointer','arrow')
 setappdata(handles.figure1, 'S', S); %Guarda los cambios en variables
-
 
 % --------------------------------------------------------------------
 function menu_batchCorrelate_Callback(hObject, eventdata, handles)
