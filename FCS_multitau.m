@@ -36,7 +36,7 @@ if numCanales>1 %Si hay dos canales hace la correlación cruzada automáticamente
     numCanales=3; %Dos canales más la correlación cruzada
 end
     
-G=zeros (numPuntosCorrFinal, numCanales);
+G=zeros(numPuntosCorrFinal, numCanales, 'double');
 tdata_corr=zeros(numPuntosCorrFinal, 1);
 
 tdata=tdataTodos(indicesNOrepe);

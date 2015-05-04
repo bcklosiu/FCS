@@ -11,6 +11,8 @@ function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync,
 %
 % ULS Ago14
 % jri 4Dec14
+% jri 4May15 - Convierto FCSData en uint8 pero hay que estar a loro porque me parece que está duplicando el uso de memoria con los cores.
+
 
 imgCut=imgNOalineada(indLineasLS,:,:);
 numChannels=size(imgCut,3);
@@ -52,10 +54,10 @@ restoLineas=parIndLineasIMG(end)+multiploLineas-1-numLineas; %Nº de lineas resta
 parLimitesImg5sigma=[limitesImg5sigma; ones(restoLineas,2)];
 parImgCut=[imgCut;zeros(restoLineas,size(imgCut,2),numChannels)];
 parNumLineas=size(parIndLineasIMG,1);
-FCSDataBin=zeros(parNumLineas*numWorkers,numChannels);
+FCSDataBin=zeros(parNumLineas*numWorkers, numChannels, 'uint8'); %Atención estás duplicando la memoria
 
 spmd (numWorkers)
-    parFCSDataBin=zeros(parNumLineas,numChannels);
+    parFCSDataBin=zeros(parNumLineas, numChannels, 'uint8'); %Atención estás duplicando la memoria?
     for channel=1:numChannels
         parImgCutTemp=parImgCut(:,:,channel); %Matriz temporal, solo un canal
         for parLine=1:parNumLineas

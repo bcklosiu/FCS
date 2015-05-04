@@ -634,25 +634,17 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 disp ('Computing correlation')
 tic;
+
 S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 if S.isScanning
-    [FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~, S.binFreq]=...
+    [~, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~, S.binFreq, S.FCSTraza, S.tTraza]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
         R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
     strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
     set (handles.edit_binningFrequency, 'String', strBinFreq);
 else
-    [FCSintervalos, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~]=...
+    [~, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~, S.FCSTraza, S.tTraza]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binFreq, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.channel);
-end
-%Calculo las trazas para representar
-binTimeTraza=0.01; %Las trazas para representar las hago de 0.01s
-tplot=size(FCSintervalos, 1)/S.binFreq;
-numPuntosTraza=floor(tplot/binTimeTraza);
-numCanales=size(FCSintervalos, 2);
-S.FCSTraza=zeros(numPuntosTraza, numCanales);
-for intervalo=1:S.numIntervalos
-    [S.FCSTraza(:,:,intervalo), S.tTraza]=FCS_calculabinstraza(FCSintervalos(:,:,intervalo), 1/S.binFreq, binTimeTraza);
 end
 tdecode=toc;
 disp (['Correlation time: ' num2str(tdecode) ' s'])
@@ -791,7 +783,9 @@ if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
     v.fname=[v.path FileName];
-    rmappdata (handles.figure1, 'S');
+    if isappdata (handles.figure1, 'S')
+        rmappdata (handles.figure1, 'S');
+    end
     if isappdata (handles.figure1, 'R')
         rmappdata (handles.figure1, 'R');
     end

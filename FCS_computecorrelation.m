@@ -46,6 +46,8 @@ function varargout=FCS_computecorrelation (varargin)
 % jri 22Ene15 - Corrijo el deltaTbin, que faltaba para el point-FCS
 % jri 24Abr15 - Añado las cuentas por segundo y corrijo tData para que sea el t de los FCSintervalos y no el de FCSData
 % jri 28Apr15 - Añado cps por intervalo y ambio FCS promedio para que FCSmean la calcule fuera de FCSpromedio
+% jri 4May15 - Calculo los intervalos uno de cada vez para evitar duplicar FCSData
+% jri 4May15 - Convierto FCSData en uint8
 
 
 photonArrivalTimes=varargin{1};
@@ -110,26 +112,32 @@ if tipoCorrelacion < 3
     FCSData=FCSData(:, tipoCorrelacion);
 end
 
-disp(['Correlating ' num2str(size(FCSData, 2)) ' channels'])
 
-FCSintervalos= FCS_troceador(FCSData, numIntervalos);
-Gintervalos= FCS_matriz (FCSintervalos, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
+numData=size(FCSData,1);
+tData=(1:numData)*deltaTBin;
+cps=round(sum(FCSData, 'double')/(numData*deltaTBin));
+if max(FCSData(:))==255
+    disp('Error: FCSData es uint8, pero cada bin tiene más de 255 cuentas')
+end
+disp (['Maximal number of counts per bin: ' num2str(max(FCSData(:)))])
+disp (['Average counts per second: ' num2str(cps)])
+
+%cpsIntervalos=FCS_calculacpsintervalos (FCSData, numIntervalos, binFreq); 
+%cps(intervalo, canal) - Primero los intervalos, luego los canales
+
+disp(['Correlating ' num2str(size(FCSData, 2)) ' channels at ' num2str(binFreq/1000) ' kHz'])
+[Gintervalos cpsIntervalos]= FCS_matriz (FCSData, numIntervalos, numSubIntervalosError, binFreq, numSecciones, numPuntosSeccion, base, tauLagMax);
 usaSubIntervalosError=logical(numSubIntervalosError); %Si numSubIntervalosError>0 entonces usa los subIntervalos para calcular la incertidumbre
 Gmean=FCS_promedio(Gintervalos, 1:numIntervalos, usaSubIntervalosError);
 
-numData=size(FCSData,1);
-numDataIntervalos=size(FCSintervalos,1);
-cps=round(sum(FCSData)/(numData*deltaTBin));
-cpsIntervalos=round(squeeze(sum(FCSintervalos, 1))/(numDataIntervalos*deltaTBin));
-%cps(intervalo, canal) - Primero los intervalos, luego los canales
-if size(FCSintervalos, 2)>1 %Cuando sólo es un canal da igual
-    cpsIntervalos=cpsIntervalos';
-end
-tData=(1:numData)*deltaTBin;
+%Finalmente calculo unas trazas con un binning de 0.01s para poder representarlas con facilidad
+binTimeTraza=0.01;
+[FCSTraza, tTraza]=FCS_calculabinstraza(FCSData, numIntervalos, binFreq, binTimeTraza);
+
 
 if isScanning
-    varargout={FCSintervalos, Gintervalos, Gmean, cps, cpsIntervalos, tData, binFreq};
+    varargout={FCSData, Gintervalos, Gmean, cps, cpsIntervalos, tData, binFreq, FCSTraza, tTraza};
 else
-    varargout={FCSintervalos, Gintervalos, Gmean, cps, cpsIntervalos, tData};
+    varargout={FCSData, Gintervalos, Gmean, cps, cpsIntervalos, tData, FCSTraza, tTraza};
 end
 
