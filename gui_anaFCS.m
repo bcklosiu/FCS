@@ -662,10 +662,10 @@ if S.correctAP
     %Si se corrige el afterpulsing (AP) Gmean se convierte en la corregida y las no corregidas _noAP 
     S.Gmean_noAP=S.Gmean;
     S.Gintervalos_noAP=S.Gintervalos;
-    for intervalo=1:S.numIntervalos
-        [S.Gintervalos(:,:,intervalo) S.alfa]=FCS_afterpulsing (S.Gintervalos_noAP(:, :, intervalo), S.cpsIntervalos(intervalo,:), S.tau_AP(:,S.channel), S.alfaCoeff(:,S.channel));
-    end
-    S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, logical(S.numSubIntervalosError));
+    [G_AP Gintervalos_AP alfa]=correctforAP(S.Gintervalos_noAP, S.intervalosPromediados, S.numSubIntervalosError, S.cpsIntervalos, S.tau_AP, S.alfaCoeff, S.channel);
+    S.Gmean=G_AP;
+    S.Gintervalos=Gintervalos_AP;
+    S.alfa=alfa;
 end
 
 
@@ -770,7 +770,9 @@ if ischar(pathName)
         fname=d(n).name;
         disp (['Loading ' v.path fname])
         S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean', 'cps');
-        FCS_save2ASCII ([v.path fname], S.Gmean, S.channel, S.intervalosPromediados, cps);
+        FCS_save2ASCII ([v.path fname], S.Gmean, S.channel, S.intervalosPromediados, S.cps);
+%        S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean_noAP', 'cps');
+%        FCS_save2ASCII ([v.path fname(1:end-4) '_noAP.mat'], S.Gmean_noAP, S.channel, S.intervalosPromediados, S.cps);
         disp ('OK')
     end
     disp ('Finished converting to ASCII')
@@ -932,3 +934,11 @@ S.tau_AP=[];
 S.alfaCoeff=[];
 S.correctAP=false;
 S.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
+
+function [Gmean Gintervalos alfa]=correctforAP(Gintervalos_noAP, intervalosPromediados, numSubIntervalosError, cpsIntervalos, tau_AP, alfaCoeff, acqChannel)
+    %Corrige todos los Gintervalos
+    for intervalo=1:size(Gintervalos_noAP, 3)
+        [Gintervalos(:,:,intervalo) alfa]=FCS_afterpulsing (Gintervalos_noAP(:, :, intervalo), cpsIntervalos(intervalo,:), tau_AP, alfaCoeff, acqChannel);
+    end
+    %Pero sólo promedia para los indicados en intervalosPromediados
+    Gmean=FCS_promedio(Gintervalos, intervalosPromediados, logical(numSubIntervalosError));

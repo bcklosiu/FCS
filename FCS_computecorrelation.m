@@ -34,8 +34,8 @@ function varargout=FCS_computecorrelation (varargin)
 %   tipoCorrelacion puede ser 1 o 2 para autocorrelación de los canales 1 o 2, respectivamente, o 3 para ambas
 %
 %   TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
-%   
-%   binLines es el número de líneas con las que se hace binning en el caso de scanning FCS    
+%
+%   binLines es el número de líneas con las que se hace binning en el caso de scanning FCS
 %
 %   En el caso de scanning FCS hay que llamar antes a FCS_align, que hace
 %   el ROI y después la alineación
@@ -58,7 +58,7 @@ numSubIntervalosError=varargin{8};
 tipoCorrelacion=varargin{9};
 
 
-% Es esto necesario? 
+% Es esto necesario?
 inicializamatlabpool();
 
 isScanning = logical(size(photonArrivalTimes,2)-3); %isScanning es true si se trata de scanning FCS; sino, false
@@ -69,7 +69,7 @@ if isScanning
     indLinesLS=varargin{12};
     indMaxCadaLinea=varargin{13};
     sigma2_5=varargin{14};
-        
+    
     macroTimeCol=4;
     microTimeCol=5;
     channelsCol=6;
@@ -86,12 +86,12 @@ numCanales=numel(unique(photonArrivalTimes(:, channelsCol)));
 if isScanning
     [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
     binFreq=1/deltaTBin;
-
+    
 else %isSCanningFCS==0 -  Esto es FCS puntual
     switch numCanales
         case 1
             t0=photonArrivalTimes(1, macroTimeCol)+photonArrivalTimes(1, microTimeCol); %pixel de referencia para binning (1er photon)
-        case 2 
+        case 2
             t0channels=zeros(numCanales, 1);
             for channel=1:numCanales
                 indPrimerPhotonCanal=find(photonArrivalTimes(:, channelsCol)==channel-1,1,'first');
@@ -121,6 +121,10 @@ numData=size(FCSData,1);
 numDataIntervalos=size(FCSintervalos,1);
 cps=round(sum(FCSData)/(numData*deltaTBin));
 cpsIntervalos=round(squeeze(sum(FCSintervalos, 1))/(numDataIntervalos*deltaTBin));
+%cps(intervalo, canal) - Primero los intervalos, luego los canales
+if size(FCSintervalos, 2)>1 %Cuando sólo es un canal da igual
+    cpsIntervalos=cpsIntervalos';
+end
 tData=(1:numData)*deltaTBin;
 
 if isScanning
