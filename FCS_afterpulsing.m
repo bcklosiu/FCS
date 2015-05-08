@@ -7,6 +7,7 @@ function [G_AP alfa]=FCS_afterpulsing (G, cps, tau_AP, alfaCoeff, acqChannel)
 % Utiliza el modelo biexpoencial de ZHAO03
 %
 % jri - 27Apr15
+% jri - 8May15. Modelo de tres exponenciales
 
 
 %Si acqChannel es 3, entonces lleva los datos del canal 1 y el 2
@@ -25,7 +26,7 @@ switch numCanales
         G_AP(:,2)=G(:,2)-alfa/squeeze(cps);
     otherwise
         for canal=1:numCanales
-            alfa(:,canal)=alfaCoeff(1, canal).*exp(-tauG/tau_AP(1,canal))+alfaCoeff(2, canal).*exp(-tauG/tau_AP(2,canal));
+            alfa(:,canal)=alfaCoeff(1, canal).*exp(-tauG/tau_AP(1,canal))+alfaCoeff(2, canal).*exp(-tauG/tau_AP(2,canal))+alfaCoeff(3, canal).*exp(-tauG/tau_AP(3,canal));
             G_AP(:,2*canal)=G(:,2*canal)-alfa(:,canal)/(cps(canal));
         end
 end

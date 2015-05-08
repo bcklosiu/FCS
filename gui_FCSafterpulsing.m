@@ -44,9 +44,10 @@ else
     v.tau_AP=[];
 end
 if isempty(v.tau_AP) %Por si llega un argumento vacío
-    v.tau_AP=[4.03823e-07,2.80378e-07; 9.24967e-06,1.2336e-05];
-    v.alfaCoeff=[3574.46747000000,17583.6597700000; 447.666380000000,856.388320000000];
+    v.tau_AP=[2.76574e-07, 1.75635e-07; 7.012010e-06, 3.917470e-06; 1E-30, 1.859350e-05];
+    v.alfaCoeff=[5143.28,2.879463288e+04; 486.22, 732.09; 0, 459.790];
 end
+
 
 v.tau_AP_old=v.tau_AP;
 v.alfaCoeff_old=v.alfaCoeff;
@@ -66,8 +67,8 @@ v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 if v.OKbutton
     tabla_alfaCorr=get (handles.uitable_alfaCorr, 'Data');
-    tau_AP=cell2mat(tabla_alfaCorr(1:2, :));
-    alfaCoeff=cell2mat(tabla_alfaCorr(3:4, :));
+    tau_AP=cell2mat(tabla_alfaCorr(1:3, :));
+    alfaCoeff=cell2mat(tabla_alfaCorr(4:6, :));
     varargout{1}=tau_AP;
     varargout{2}=alfaCoeff;
 else
