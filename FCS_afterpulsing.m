@@ -22,7 +22,7 @@ alfa=zeros(numel(tauG), numCanales);
 
 switch numCanales
     case 1
-        alfa(:)=alfaCoeff(1, acqChannel).*exp(-tauG/tau_AP(1,acqChannel))+alfaCoeff(2, acqChannel).*exp(-tauG/tau_AP(2,acqChannel));
+        alfa(:)=alfaCoeff(1, acqChannel).*exp(-tauG/tau_AP(1,acqChannel))+alfaCoeff(2, acqChannel).*exp(-tauG/tau_AP(2,acqChannel))+alfaCoeff(3, acqChannel).*exp(-tauG/tau_AP(3,acqChannel));
         G_AP(:,2)=G(:,2)-alfa/squeeze(cps);
     otherwise
         for canal=1:numCanales
