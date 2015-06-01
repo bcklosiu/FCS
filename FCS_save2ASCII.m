@@ -7,10 +7,9 @@ function fid=FCS_save2ASCII (fileName, Gmean, canal, intervalosPromediados, cps)
 % fileName incluye el path
 % jri 23Abr15
 
-
-if strcmp(fileName(end-4:end), '.mat')
+if strcmpi(fileName(end-3:end), '.mat')
     fileName=[fileName(1:end-4) '.dat'];
-elseif not(strcmp(fileName(end-4:end), '.dat'))
+elseif not(strcmpi(fileName(end-4:end), '.dat'))
     fileName=[fileName '.dat'];
 end
 
