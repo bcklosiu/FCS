@@ -31,14 +31,6 @@ for m=1:numel(d)
     hfig=figure;
     set (hfig, 'Name', fname(1:end-4), 'Color', [1 1 1])
     errorbar(Gmean_noAP(:,1), Gmean_noAP(:,2), Gmean_noAP(:,3), 'b', 'LineWidth', 2)
-    
-    save (fname, 'Gmean', 'Gintervalos', 'tau_AP', 'alfaCoeff', 'alfa', '-append')
-    %    FCS_save2ASCII ([fname(1:end-4) '_noAP.mat'], Gmean_noAP, 1, intervalosPromediados, cps);
-    FCS_save2ASCII ([fname(1:end-4) '_AP.mat'], Gmean, channel, intervalosPromediados, cps);
-    figure (m)
-    set (m, 'Name', fname, 'Color', [1 1 1])
-    errorbar(Gmean_noAP(:,1), Gmean_noAP(:,2), Gmean_noAP(:,3), 'b', 'LineWidth', 2)
-    
     hold on
     errorbar(Gmean(:,1), Gmean(:,2), Gmean(:,3), 'r', 'LineWidth', 2)
     set (gca, 'xscale', 'log')
