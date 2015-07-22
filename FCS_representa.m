@@ -1,13 +1,13 @@
-function varargout=FCS_representa (FCSData, Gdata, deltaT, tipoCorrelacion, hfig)
+function varargout=FCS_representa (FCSTraza, tTraza, Gdata, cps, tipoCorrelacion, hfig)
 
 %
-% [hinf hsup hfig]=FCS_representa (FCSData, Gdata, tipoCorrelacion, hfig);
+% [hinf hsup hfig]=FCS_representa (FCSTraza, tTraza, Gdata, cps, tipoCorrelacion, hfig)
 % Representa el resultado de la correlación
-%   FCSData es un vector columna o una matriz de dos columnas que contiene datos de la traza temporal de uno o dos canales, respectivamente.
+%   FCSTraza es un vector columna o una matriz de dos columnas que contiene datos de la traza temporal (de adquisición) de uno o dos canales, respectivamente
+%   FCSTraza corresponde sólo a un intervalo
+%   tTraza es el tiempo que le correponde
 %   Gdata es una matriz que contiene los datos de la correlación (matrizFCS): la 1ª columna es el tiempo, la 2ª la ACF del canal 1, la 3ª su error, etc.
-%   deltaT=1/sampfreq (en s)
 %   tipoCorrelacion es 3 para correlacón cruzada o 1 ó 2 para autocorrelación
-%   Puede estar vacío: []. Si no hay handle, tampoco es necesario ponerlo
 %   hfig es el handle a la figura en la que lo representará. Si no se indica crea una figura nueva
 %   Si no hay argumentos de salida no devuelve nada
 %
@@ -26,6 +26,8 @@ function varargout=FCS_representa (FCSData, Gdata, deltaT, tipoCorrelacion, hfig
 % jri 2Feb15 - Incluye el número de figura
 % jri 26Mar15 - Dibuja CPS en 10^2 CPS (bins de 0.01s). Cambia la línea para que pase por el promedio, en vez de por 1
 % jri 20Abr15
+% jri 21Jul15 - Cambio a FCSTraza y tTraza para que no tenga que calcularlo
+% Comprueba FCS_representa2 y FCS_representaTrata y gui_FCSrepresenta
 
 tdata_k=Gdata(:,1)*1000; %Para poner la escala en ms
 G(:,1)=Gdata(:,2);
@@ -54,16 +56,17 @@ end
 hsup=subplot (2,1,1); %Representa las trazas
 hinf=subplot (2,1,2); % Representa la autocorrelacion
 
-[FCSTraza, tTraza, cpscanal]=FCS_calculabinstraza(FCSData, deltaT, 0.01);
+%[FCSTraza, tTraza, cps]=FCS_calculabinstraza(FCSData, deltaT, 0.01); Para la definición de FCS_representa anterior
+
 if tipoCorrelacion==3 % cuando es correlación cruzada
     hsup(2)=axes;
     set(hfig, 'CurrentAxes', hsup(1))
     htemp1=plot (tTraza, FCSTraza(:,1), 'Color', verde, 'Linewidth', 1.5);
-    hLegend(1)=legend (['Ch 1: ', num2str(cpscanal(1))]);
+    hLegend(1)=legend (['Ch 1: ', num2str(cps(1))]);
     %hold on
     set(hfig, 'CurrentAxes', hsup(2))
     htemp2=plot (tTraza, FCSTraza(:,2), 'Color', rojo, 'Linewidth', 1.5);
-    hLegend(3)=legend (['Ch 2: ', num2str(cpscanal(2))]);
+    hLegend(3)=legend (['Ch 2: ', num2str(cps(2))]);
     linePos=mean(FCSTraza);
     v=axis (hsup(1));
     line ([v(1) v(2)], [linePos(1) linePos(1)], 'Color', [0 0 0], 'LineStyle', ':') %Pinta una línea que pasa por 1
@@ -92,7 +95,7 @@ else
     canal=1;
     set(hfig, 'CurrentAxes', hsup)
     htemp=plot (tTraza, FCSTraza(:, canal), 'Color', verde, 'Linewidth', 1.5);
-    hLegend(1)=legend (['Ch ', num2str(canal) ': ', num2str(cpscanal(canal))]);
+    hLegend(1)=legend (['Ch ', num2str(canal) ': ', num2str(cps(canal))]);
     v=axis(hsup);
     linePos=mean(FCSTraza(:, 1));
     line ([v(1) v(2)], [linePos linePos], 'Color', [0 0 0], 'LineStyle', ':')
@@ -103,7 +106,7 @@ else
     hCorrPlot=errorbar (tdata_k, G(:, canal), SD(:, canal), 'o-', 'Color', verde, 'Linewidth', 1.5);
     %{
         htemp=plot (tTraza, FCSTraza(:,2), 'Color', rojo, 'Linewidth', 1.5);
-        hLegend(1)=legend (['Ch 2: ', num2str(cpscanal(2))]);
+        hLegend(1)=legend (['Ch 2: ', num2str(cps(2))]);
         v=axis (hsup);
         line ([v(1) v(2)], [linePos(canal) linePos(canal)], 'Color', [0 0 0], 'LineStyle', ':')
         axis (hsup, [v(1) v(2) min(min(FCSTraza(canal)))*0.99 max(max(FCSTraza(canal)))*1.01])

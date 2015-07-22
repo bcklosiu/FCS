@@ -2,16 +2,18 @@ function [FCSTrazaIntervalos, tTraza]=FCS_calculabinstraza(FCSData, numIntervalo
 %
 %[FCSTrazaIntervalos, tTraza]=FCS_calculabinstraza(FCSData, numIntervalos, binFreq, binTimeTraza)
 %   FCS_calculabinstraza es un rebinning de la traza para representarla
-%   FCSData son los datos estilo ISS
-%   deltaT es el periodo de muestreo de FCSData: deltaT=1/binFreq
+%   También la divide en los intervalos indicados en numIntervalos
+%   FCSData son los fotones en bins de tamaño 1/binFreq (datos estilo ISS)
+%   binFreq es la frecuencia de muestreo de FCSData
 %   binTime es el nuevo binning del tiempo. Para representar en general usamos binTime=0.01s
 %
 % jri 27Nov14
 % jri 4May15
+% jri 21Jul15 - Comentarios
 
 
 
-deltaT=1/binFreq;
+deltaT=1/binFreq; %deltaT es el periodo de muestreo de FCSData: deltaT=1/binFreq
 
 numData=size(FCSData,1);
 numCanales=size(FCSData,2);

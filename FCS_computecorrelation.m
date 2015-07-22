@@ -2,20 +2,22 @@ function varargout=FCS_computecorrelation (varargin)
 
 %
 % Scanning FCS:
-%[FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData, binFreq]=...
+%[FCSData, Gintervalos, Gmean, cps, cpsIntervalos, tData, binFreq, FCSTraza, tTraza]=...
 %    FCS_computecorrelation (photonArrivalTimes, numIntervalos, binLines, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion, ...
 %    imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5);
 %
 % Point FCS
-%[FCSintervalos, Gintervalos, FCSmean, Gmean, cps, tData]=...
+%[FCSData, Gintervalos, Gmean, cps, cpsIntervalos, tData, FCSTraza, tTraza]=...
 %   FCS_computecorrelation (photonArrivalTimes, numIntervalos, binFreq, tauLagMax, numSecciones, numPuntosSeccion, base, numSubIntervalosError, tipoCorrelacion)
 %
-%   FCSintervalos es FCSData de cada intervalo (los datos de FCS en bins temporales de tamaño deltaT=1/binFreq)
+%   FCSData son los datos temporales en bins temporales de tamaño deltaT=1/binFreq
 %   Gintervalos es la curva experimental de correlación de cada intervalo con su tiempo, su traza y su error en la tercera columna
 %   FCSmean es el promedio de todas las trazas
 %   Gmean es el promedio de todas las curvas de correlación
 %   cps son las cuentas por segundo en cada canal
-%   tData es el tiempo de cada punto en FCSintervalos
+%   tData es el tiempo de cada punto en FCSData
+%   FCSTraza es la traza temporal (los fotones de la adquisición) agrupados en intervalos de 0.01s
+%   tTraza es el tiempo que le corresponde a esos fotones
 %
 %   photonArrivalTimes es la matriz de tiempos de llegada (arrivalTimes) de B&H
 %   binFreq es la frecuencia del binning, en Hz.
@@ -48,6 +50,8 @@ function varargout=FCS_computecorrelation (varargin)
 % jri 28Apr15 - Añado cps por intervalo y ambio FCS promedio para que FCSmean la calcule fuera de FCSpromedio
 % jri 4May15 - Calculo los intervalos uno de cada vez para evitar duplicar FCSData
 % jri 4May15 - Convierto FCSData en uint8
+% jri 21Jul15 - Comentarios
+
 
 
 photonArrivalTimes=varargin{1};

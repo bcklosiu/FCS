@@ -22,7 +22,7 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 28-Apr-2015 16:47:25
+% Last Modified by GUIDE v2.5 21-Jul-2015 19:19:22
 
 % Begin initialization code - DO NOT EDIT
 
@@ -56,9 +56,11 @@ function gui_anaFCS_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to gui_anaFCS (see VARARGIN)
 
+set (hObject, 'CloseRequestFcn' ,@mainFigure_CloseRequestFcn)
+
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior.
 
-variables.anaFCS_version='28Apr15'; %Esta es la versión del código
+variables.anaFCS_version='21Jul15'; %Esta es la versión del código
 
 variables.path=pwd;
 variables.pathSave='';
@@ -82,7 +84,8 @@ set(handles.edit_subIntervalsForUncertainty, 'String', '0', 'Enable', 'off');
 variables.numSubIntervalosError_anterior=18; %Por defecto cuando se activa
 variables.h_figIntervalos=figure;
 variables.h_figPromedio=figure;
-variables.allFigures=[variables.h_figIntervalos variables.h_figPromedio];
+variables.h_figTrazaAdquisicion=figure; %Una figura para representar la traza de adquisición (tTraza, FCSTraza)
+variables.allFigures=[variables.h_figIntervalos variables.h_figPromedio variables.h_figTrazaAdquisicion];
 set (variables.allFigures, 'NumberTitle' , 'off', 'Visible', 'off', 'DockControls', 'off', 'Color', [1 1 1])
 set (variables.allFigures, 'CloseRequestFcn', @FigCloseRequestFcn)
 
@@ -124,109 +127,18 @@ delete (hObject);
 
 
 % --- Executes when user attempts to close figure1.
-function figure1_CloseRequestFcn(hObject, eventdata, handles)
+function mainFigure_CloseRequestFcn(hObject, eventdata)
 %Para que esto funcione tiene que estar definido en las properties del GUI.
 %Sólo hay que hacer click en el botón de CloseRequestFcn
 
+uiresume (hObject) %Permite que se ejecute vargout
+
+% --------------------------------------------------------------------
+function menu_exit_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_exit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 uiresume (handles.figure1) %Permite que se ejecute vargout
-
-
-% --- Executes on button press in pushbutton_loadCorrelationCurves.
-function pushbutton_loadCorrelationCurves_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-%S no la tiene que recuperar, porque la carga aquí
-
-[FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
-if ischar(FileName)
-    rmappdata (handles.figure1, 'S'); %Borra S como variable global para que no ocupe RAM mientras carga la siguiente
-    if isappdata (handles.figure1, 'R');
-        rmappdata (handles.figure1, 'R');
-    end
-    set (handles.figure1,'Pointer','watch')
-    drawnow update
-    v.path=PathName;
-    S=load ([v.path FileName], 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
-        'intervalosPromediados', 'Gintervalos', 'Gmean', 'isScanning', 'cps');
-    v.fname=[v.path FileName];
-    if S.isScanning
-        macroTimeCol=4;
-        microTimeCol=5;
-        channelsCol=6;
-    else
-        macroTimeCol=1;
-        microTimeCol=2;
-        channelsCol=3;
-    end
-    if not(isfield(S, 'acqTime'))
-        S.acqTime=0;
-    end
-    if not(isfield(S, 'intervalosPromediados')) %Para archivos viejos. Si no se indican los intervalos promediados, se promedian todos
-        S.intervalosPromediados=1:S.numIntervalos;
-    end
-    
-    %acqTime=S.photonArrivalTimes(end, macroTimeCol)+S.photonArrivalTimes(end, microTimeCol)-(S.photonArrivalTimes(1, macroTimeCol)+S.photonArrivalTimes(1, microTimeCol));
-    strAcqTime=sprintf('%3.2f', S.acqTime);
-    set(handles.edit_acquisitionTime, 'String', strAcqTime);
-    set(handles.edit_intervals, 'String', num2str(S.numIntervalos));
-    set(handles.edit_binningFrequency, 'String', num2str(S.binFreq/1E3));
-    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(S.numSubIntervalosError));
-    set(handles.edit_subIntervalsForUncertainty, 'Enable', 'off');
-    set(handles.radiobutton_averageSEM, 'Value', true)
-    if S.numSubIntervalosError
-        set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
-        set (handles.radiobutton_subIntervalsSEM, 'Value', true)
-    end
-    set(handles.edit_maximumTauLag, 'String', num2str(S.tauLagMax/1E-3));
-    set(handles.edit_sections, 'String', num2str(S.numSecciones));
-    set(handles.edit_base, 'String', num2str(S.base));
-    set(handles.edit_pointsPerSection, 'String', num2str(S.numPuntosSeccion));
-    switch lower(S.tipoCorrelacion)
-        case 'auto'
-            set (handles.radiobutton_auto, 'Value', 1)
-        otherwise
-            set (handles.radiobutton_cross, 'Value', 1)
-    end
-    
-    
-    for n=1:S.numIntervalos
-        FCS_representa (S.FCSTraza(:,:,n), S.Gintervalos(:, :, n), 1/S.binFreq, S.channel, v.h_figIntervalos); %Las ventana promedio va a ser la 500
-    end
-    FCS_representa2 (S.Gmean, S.channel, v.h_figPromedio);
-    promedioString='';
-    for n=1:numel(S.intervalosPromediados)
-        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
-    end
-    promedioString=promedioString(1:end-2); %Le quito la última ', '
-    set (v.allFigures, 'Visible', 'on')
-    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
-    
-    pos=find(v.path=='\', 2, 'last');
-    nombreFCSData=['...' v.fname(pos:end-4)];
-    set (handles.figure1, 'Name' , ['anaFCS - ' nombreFCSData])
-    set (handles.figure1,'Pointer','arrow')
-    setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-    setappdata(handles.figure1, 'S', S); %Guarda S
-end
-
-
-% --- Executes on button press in pushbutton_plotCorrelationCurves.
-function pushbutton_plotCorrelationCurves_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S');
-
-set (v.allFigures, 'Visible', 'on')
-gui_FCSrepresenta (S.FCSTraza, S.Gintervalos, 1/S.binFreq, S.tipoCorrelacion, v.h_figIntervalos)
-FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
-promedioString='';
-for n=1:numel(S.intervalosPromediados)
-    promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
-end
-promedioString=promedioString(1:end-2); %Le quito la última ', '
-set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
-
-
-setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
-
 
 
 function edit_sections_Callback(hObject, eventdata, handles)
@@ -444,31 +356,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in pushbutton_averageFCSCurves.
-function pushbutton_averageFCSCurves_Callback(hObject, eventdata, handles)
-v=getappdata (handles.figure1, 'v'); %Recupera variables
-S=getappdata (handles.figure1, 'S');
-
-answer=inputdlg('Average FCS curves: ', 'Average', 1);
-if not(isempty(answer))
-    rangeString=answer{1};
-    endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
-    S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
-    usaSubIntervalosError=logical(S.numSubIntervalosError);
-%    S.FCSmean=mean(F.FCSintervalos (:, : , S.intervalosPromediados),3);
-    S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, usaSubIntervalosError);
-%   FCS_representa (S.FCSmean, S.Gmean, 1/S.binFreq, S.tipoCorrelacion, v.h_figPromedio);
-    FCS_representa2 (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
-    promedioString='';
-    for n=1:numel(S.intervalosPromediados)
-        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
-    end
-    promedioString=promedioString(1:end-2); %Le quito la última ', '
-    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
-end
-setappdata (handles.figure1, 'S', S);
-
-
 function cierraFigurasMalCerradas
 h=findobj('CloseRequestFcn',@FigCloseRequestFcn);
 set (h, 'CloseRequestFcn', 'closereq')
@@ -476,7 +363,6 @@ if h
     disp (['Closing previously opened figures ' num2str(h')])
 end
 close (h)
-
 
 
 % --- Executes on button press in pushbutton_fitIndividualCurves.
@@ -651,7 +537,7 @@ disp (['Correlation time: ' num2str(tdecode) ' s'])
 
 %Corrijo el afterpulsing
 if S.correctAP
-    %Si se corrige el afterpulsing (AP) Gmean se convierte en la corregida y las no corregidas _noAP 
+    %Si se corrige el afterpulsing (AP) Gmean se convierte en la corregida y las no corregidas _noAP
     S.Gmean_noAP=S.Gmean;
     S.Gintervalos_noAP=S.Gintervalos;
     [G_AP Gintervalos_AP alfa]=correctforAP(S.Gintervalos_noAP, S.intervalosPromediados, S.numSubIntervalosError, S.cpsIntervalos, S.tau_AP, S.alfaCoeff, S.channel);
@@ -694,7 +580,6 @@ setappdata(handles.figure1, 'v', S);
 %
 % Para point FCS
 % [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
-
 
 
 
@@ -763,8 +648,8 @@ if ischar(pathName)
         disp (['Loading ' v.path fname])
         S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean', 'cps');
         FCS_save2ASCII ([v.path fname], S.Gmean, S.channel, S.intervalosPromediados, S.cps);
-%        S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean_noAP', 'cps');
-%        FCS_save2ASCII ([v.path fname(1:end-4) '_noAP.mat'], S.Gmean_noAP, S.channel, S.intervalosPromediados, S.cps);
+        %        S=load ([v.path fname], 'channel', 'intervalosPromediados', 'Gmean_noAP', 'cps');
+        %        FCS_save2ASCII ([v.path fname(1:end-4) '_noAP.mat'], S.Gmean_noAP, S.channel, S.intervalosPromediados, S.cps);
         disp ('OK')
     end
     disp ('Finished converting to ASCII')
@@ -775,6 +660,7 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 % --------------------------------------------------------------------
 function menu_loadRawPhotonData_Callback(hObject, eventdata, handles)
+
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 [FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose your FCS file', v.path);
 set (handles.figure1,'Pointer','watch')
@@ -796,6 +682,8 @@ if ischar(FileName)
     setappdata(handles.figure1, 'R', R);
     setappdata(handles.figure1, 'S', S);
     disp ('OK')
+    %Habilita el menú correspondiente
+    set (handles.menu_computeCorrelation, 'Enable', 'on')
 end
 
 set (handles.figure1,'Pointer','arrow')
@@ -803,7 +691,13 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
 % --------------------------------------------------------------------
-function menu_computecorrelation_Callback(hObject, eventdata, handles)
+function menu_computeCorrelation_Callback(hObject, eventdata, handles)
+
+set (handles.menu_plotCorrelationCurves, 'Enable', 'on')
+set (handles.menu_averageFCSCurves, 'Enable', 'on')
+set (handles.menu_saveFCSAnalysis, 'Enable', 'on')
+set (handles.menu_saveAsASCII, 'Enable', 'on')
+
 S=getappdata (handles.figure1, 'S'); %Recupera variables
 R=getappdata (handles.figure1, 'R'); %Recupera variables
 [S.tau_AP S.alfaCoeff S.correctAP]=gui_FCSafterpulsing(S.tau_AP, S.alfaCoeff);
@@ -919,7 +813,7 @@ S=getappdata (handles.figure1, 'S');
 fname
 [S.tau_AP,S.alfaCoeff]=gui_FCSafterpulsing;
 [S.G_AP S.alfa]=FCS_afterpulsing (S.Gmean, S.cps, S.tau_AP, S.alfaCoeff);
-%save 
+%save
 
 setappdata(handles.figure1, 'S', S); %Guarda los cambios en variabl
 
@@ -930,9 +824,142 @@ S.correctAP=false;
 S.version=1; %Esta es la versión de los ficheros matlab en los que se guardan las imágenes, etc.
 
 function [Gmean Gintervalos alfa]=correctforAP(Gintervalos_noAP, intervalosPromediados, numSubIntervalosError, cpsIntervalos, tau_AP, alfaCoeff, acqChannel)
-    %Corrige todos los Gintervalos
-    for intervalo=1:size(Gintervalos_noAP, 3)
-        [Gintervalos(:,:,intervalo) alfa]=FCS_afterpulsing (Gintervalos_noAP(:, :, intervalo), cpsIntervalos(intervalo,:), tau_AP, alfaCoeff, acqChannel);
+%Corrige todos los Gintervalos
+for intervalo=1:size(Gintervalos_noAP, 3)
+    [Gintervalos(:,:,intervalo) alfa]=FCS_afterpulsing (Gintervalos_noAP(:, :, intervalo), cpsIntervalos(intervalo,:), tau_AP, alfaCoeff, acqChannel);
+end
+%Pero sólo promedia para los indicados en intervalosPromediados
+Gmean=FCS_promedio(Gintervalos, intervalosPromediados, logical(numSubIntervalosError));
+
+
+% --------------------------------------------------------------------
+function menu_plotCorrelationCurves_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S');
+
+FCS_representaG (S.Gmean, S.channel, v.h_figPromedio);
+promedioString='';
+for n=1:numel(S.intervalosPromediados)
+    promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
+end
+promedioString=promedioString(1:end-2); %Le quito la última ', '
+set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+
+answer=inputdlg('Show curves:', 'Show', 1, {promedioString});
+if not(isempty(answer))
+    rangeString=answer{1};
+    if isempty(rangeString)
+        intervalosPromediados=S.intervalosPromediados;
+    else
+        endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+        intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
     end
-    %Pero sólo promedia para los indicados en intervalosPromediados
-    Gmean=FCS_promedio(Gintervalos, intervalosPromediados, logical(numSubIntervalosError));
+    gui_FCSrepresenta (S.FCSTraza, S.tTraza, S.Gintervalos, intervalosPromediados, S.cps, S.tipoCorrelacion, v.h_figIntervalos)
+end
+
+setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+
+% --------------------------------------------------------------------
+function menu_averageFCSCurves_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+S=getappdata (handles.figure1, 'S');
+
+answer=inputdlg('Average FCS curves: ', 'Average', 1);
+if not(isempty(answer))
+    rangeString=answer{1};
+    endPage=size (S.Gintervalos,3); %Esto debe ser igual que numIntervalos
+    S.intervalosPromediados=pagerangeparser (rangeString, 1, endPage);
+    usaSubIntervalosError=logical(S.numSubIntervalosError);
+    S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, usaSubIntervalosError);
+    FCS_representaG (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
+    promedioString='';
+    for n=1:numel(S.intervalosPromediados)
+        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
+    end
+    promedioString=promedioString(1:end-2); %Le quito la última ', '
+    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+end
+setappdata (handles.figure1, 'S', S);
+
+% --------------------------------------------------------------------
+function menu_loadCorrelationCurves_Callback(hObject, eventdata, handles)
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+%S no la tiene que recuperar, porque la carga aquí
+
+[FileName,PathName, FilterIndex] = uigetfile({'*.mat'},'Choose the file with the correlation curves', v.path);
+if ischar(FileName)
+    rmappdata (handles.figure1, 'S'); %Borra S como variable global para que no ocupe RAM mientras carga la siguiente
+    if isappdata (handles.figure1, 'R');
+        rmappdata (handles.figure1, 'R');
+    end
+    set (handles.figure1,'Pointer','watch')
+    drawnow update
+    v.path=PathName;
+    S=load ([v.path FileName], 'FCSTraza', 'tTraza', 'acqTime', 'numIntervalos', 'binFreq', 'numSubIntervalosError', 'tauLagMax', 'numSecciones', 'base', 'numPuntosSeccion', 'channel', 'tipoCorrelacion',...
+        'intervalosPromediados', 'Gintervalos', 'Gmean', 'isScanning', 'cps');
+    v.fname=[v.path FileName];
+    %Prepara para versiones anteriores
+    if not(isfield(S, 'acqTime'))
+        S.acqTime=0;
+    end
+    if not(isfield(S, 'intervalosPromediados')) %Para archivos viejos. Si no se indican los intervalos promediados, se promedian todos
+        S.intervalosPromediados=1:S.numIntervalos;
+    end
+    %Fin de la preparación
+    
+    if S.isScanning
+        macroTimeCol=4;
+        microTimeCol=5;
+        channelsCol=6;
+    else
+        macroTimeCol=1;
+        microTimeCol=2;
+        channelsCol=3;
+    end
+    
+    %acqTime=S.photonArrivalTimes(end, macroTimeCol)+S.photonArrivalTimes(end, microTimeCol)-(S.photonArrivalTimes(1, macroTimeCol)+S.photonArrivalTimes(1, microTimeCol));
+    strAcqTime=sprintf('%3.2f', S.acqTime);
+    set(handles.edit_acquisitionTime, 'String', strAcqTime);
+    set(handles.edit_intervals, 'String', num2str(S.numIntervalos));
+    set(handles.edit_binningFrequency, 'String', num2str(S.binFreq/1E3));
+    set(handles.edit_subIntervalsForUncertainty, 'String', num2str(S.numSubIntervalosError));
+    set(handles.edit_subIntervalsForUncertainty, 'Enable', 'off');
+    set(handles.radiobutton_averageSEM, 'Value', true)
+    if S.numSubIntervalosError
+        set(handles.edit_subIntervalsForUncertainty, 'Enable', 'on');
+        set (handles.radiobutton_subIntervalsSEM, 'Value', true)
+    end
+    set(handles.edit_maximumTauLag, 'String', num2str(S.tauLagMax/1E-3));
+    set(handles.edit_sections, 'String', num2str(S.numSecciones));
+    set(handles.edit_base, 'String', num2str(S.base));
+    set(handles.edit_pointsPerSection, 'String', num2str(S.numPuntosSeccion));
+    switch lower(S.tipoCorrelacion)
+        case 'auto'
+            set (handles.radiobutton_auto, 'Value', 1)
+        otherwise
+            set (handles.radiobutton_cross, 'Value', 1)
+    end
+    
+    FCS_representaG (S.Gmean, S.channel, v.h_figPromedio);
+    promedioString='';
+    for n=1:numel(S.intervalosPromediados)
+        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
+    end
+    promedioString=promedioString(1:end-2); %Le quito la última ', '
+    set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+    
+    pos=find(v.path=='\', 2, 'last');
+    nombreFCSData=['...' v.fname(pos:end-4)];
+    set (handles.figure1, 'Name' , ['anaFCS - ' nombreFCSData])
+    set (handles.figure1,'Pointer','arrow')
+    setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
+    setappdata(handles.figure1, 'S', S); %Guarda S
+    
+    %Habilita los menús
+    set (handles.menu_plotCorrelationCurves, 'Enable', 'on')
+    set (handles.menu_averageFCSCurves, 'Enable', 'on')
+    set (handles.menu_saveFCSAnalysis, 'Enable', 'on')
+    set (handles.menu_saveAsASCII, 'Enable', 'on')
+  
+end
+

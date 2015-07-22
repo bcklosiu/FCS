@@ -13,5 +13,6 @@ for n=1:numFiles
     set (gca, 'xscale', 'log')
     h_text=text ('Units', 'normalized', 'Position', [0.8, 0.9], 'String', ['CPS: ', num2str(cps)]);
     set (h_text, 'BackgroundColor', [1 1 1])
+    ylim ([-0.005 0.04])
     grid on
 end

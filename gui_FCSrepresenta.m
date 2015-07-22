@@ -1,28 +1,11 @@
 function varargout = gui_FCSrepresenta(varargin)
-% GUI_FCSREPRESENTA MATLAB code for gui_FCSrepresenta.fig
-%      GUI_FCSREPRESENTA, by itself, creates a new GUI_FCSREPRESENTA or raises the existing
-%      singleton*.
+%gui_FCSrepresenta (FCSIntervalos, tTraza, Gintervalos, intervalosPromediados, cps, tipoCorrelacion, hfig)
 %
-%      H = GUI_FCSREPRESENTA returns the handle to a new GUI_FCSREPRESENTA or the handle to
-%      the existing singleton*.
-%
-%      GUI_FCSREPRESENTA('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in GUI_FCSREPRESENTA.M with the given input arguments.
-%
-%      GUI_FCSREPRESENTA('Property','Value',...) creates a new GUI_FCSREPRESENTA or raises the
-%      existing singleton*.  Starting from the left, property value pairs are
-%      applied to the GUI before gui_FCSrepresenta_OpeningFcn gets called.  An
-%      unrecognized property name or invalid value makes property application
-%      stop.  All inputs are passed to gui_FCSrepresenta_OpeningFcn via varargin.
-%
-%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
-%      instance to run (singleton)".
-%
-% See also: GUIDE, GUIDATA, GUIHANDLES
+%   FCSIntervalos es la traza de adquisición en intervalos. Tiene todos los intervalos que queramos representar
+%   tTraza es el tiempo de los FCSIntervalos. En general corresponde a 0.01s
+%   GIntervalos es la función de correlacion en intervalos
 
-% Edit the above text to modify the response to help gui_FCSrepresenta
-
-% Last Modified by GUIDE v2.5 21-Apr-2015 12:52:57
+% jri 21Jul15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,16 +35,24 @@ function gui_FCSrepresenta_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to gui_FCSrepresenta (see VARARGIN)
 
+set (hObject, 'CloseRequestFcn', @figure1_CloseRequestFcn)
+
+
 variables.FCSIntervalos=varargin{1};
-variables.GIntervalos=varargin{2};
-variables.deltaT=varargin{3};
-variables.tipoCorrelacion=varargin{4};
-variables.hfig=varargin{5};
+variables.tTraza=varargin{2};
+variables.GIntervalos=varargin{3};
+variables.intervalosPromediados=varargin{4};
+variables.cps=varargin{5};
+variables.tipoCorrelacion=varargin{6};
+variables.hfig=varargin{7};
 
-variables.showing=1;
+variables.showing=variables.intervalosPromediados(1); %Este es el intervalo que está mostrando
+set (handles.edit_showingCurve, 'String', num2str(variables.showing))
 
-[variables.hinf variables.hsup variables.hfig]=FCS_representa (variables.FCSIntervalos(:, :,variables.showing), variables.GIntervalos(:, :, variables.showing), variables.deltaT, variables.tipoCorrelacion, variables.hfig);
-set (variables.hfig, 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(variables.showing)])
+
+[variables.hinf variables.hsup variables.hfig]=...
+    FCS_representa (variables.FCSIntervalos(:, :,variables.showing), variables.tTraza, variables.GIntervalos(:, :, variables.showing), variables.cps, variables.tipoCorrelacion, variables.hfig);
+set (variables.hfig, 'Visible', 'on', 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(variables.showing)])
 setappdata (handles.figure1, 'v', variables);  %Convierte v en datos de la aplicación con el nombre v
 
 % Choose default command line output for gui_FCSrepresenta
@@ -71,7 +62,7 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 % UIWAIT makes gui_FCSrepresenta wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -82,7 +73,11 @@ function varargout = gui_FCSrepresenta_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
+v=getappdata (handles.figure1, 'v'); %Recupera variables
+
+set (v.hfig, 'Visible', 'off')
 varargout{1} = handles.output;
+delete(handles.figure1);
 
 
 % --- Executes on button press in pushbutton_retrocedeImagen.
@@ -94,12 +89,14 @@ function pushbutton_retrocedeImagen_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 v.showing=v.showing-1;
-if v.showing==0
-    v.showing=1;
+if v.showing>v.intervalosPromediados(1)-1
+    set (handles.edit_showingCurve, 'String', num2str(v.showing))
+    [v.hinf v.hsup v.hfig]=...
+        FCS_representa (v.FCSIntervalos(:, :,v.showing), v.tTraza, v.GIntervalos(:, :, v.showing), v.cps, v.tipoCorrelacion, v.hfig);
+    set (v.hfig, 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(v.showing)])
+else
+    v.showing=v.intervalosPromediados(1);
 end
-set (handles.edit_showingCurve, 'String', num2str(v.showing))
-[v.hinf v.hsup v.hfig]=FCS_representa (v.FCSIntervalos(:, :,v.showing), v.GIntervalos(:, :, v.showing), v.deltaT, v.tipoCorrelacion, v.hfig);
-set (v.hfig, 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(v.showing)])
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
@@ -112,9 +109,15 @@ function pushbutton_avanzaImagen_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 v.showing=v.showing+1;
-set (handles.edit_showingCurve, 'String', num2str(v.showing))
-[v.hinf v.hsup v.hfig]=FCS_representa (v.FCSIntervalos(:, :,v.showing), v.GIntervalos(:, :, v.showing), v.deltaT, v.tipoCorrelacion, v.hfig);
-set (v.hfig, 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(v.showing)])
+if v.showing<v.intervalosPromediados(end)+1
+    set (handles.edit_showingCurve, 'String', num2str(v.showing))
+    [v.hinf v.hsup v.hfig]=...
+        FCS_representa (v.FCSIntervalos(:, :,v.showing), v.tTraza, v.GIntervalos(:, :, v.showing), v.cps, v.tipoCorrelacion, v.hfig);
+    set (v.hfig, 'NumberTitle', 'off', 'Name', ['Curve: ' num2str(v.showing)])
+else
+    v.showing=v.intervalosPromediados(end);
+end
+
 setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 
 
@@ -137,4 +140,29 @@ function edit_showingCurve_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pushbutton_OK.
+function pushbutton_OK_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_OK (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+uiresume (handles.figure1)
+
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+if isequal(get(hObject, 'waitstatus'), 'waiting')
+    % The GUI is still in UIWAIT, us UIRESUME
+    uiresume(hObject);
+else
+    % The GUI is no longer waiting, just close it
+    delete(hObject);
 end

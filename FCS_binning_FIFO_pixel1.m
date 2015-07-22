@@ -9,12 +9,16 @@ function dataBin=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0)
 %   t0 - es el tiempo de referencia que se le resta a todos los canales
 % OUTPUT ARGUMENTS:
 %   dataBin(Fotones en el bin, canal) - es la nueva matriz con la traza temporal y el binning aplicado
+%   Con frecuencia se llama FCSData
 %
 % Modificado jri para incluir el microtime 11abr14
 % Modificado por Unai para calcular automáticamente el nº de canales
 %
 % jri - 26Nov14 - Considera que arrivalTimes de FCS puntual sólo tiene 3 columnas en vez de 6
+% jri 4May15 - Reduzco el tamaño de la matriz temporal de fotones al número máximo de fotones por canal X 2 canales
 % jri 4May15 - Convierto FCSData en uint8
+% jri 21Jul15 - Comentarios
+% jri 22Jul15 - Advertencia si databin es mayor que 255
 
 
 
@@ -33,7 +37,7 @@ end
 channels=sort(unique(arrivalTimes(:, channelsCol)),'ascend');
 nrChannels=numel(channels);
 deltaTBin=1/binFreq; %Período de binning
-numFotCh=zeros(nrChannels,1); %Número de fotones de cada canal
+numFotCh=zeros(nrChannels, 1); %Número de fotones de cada canal
 
 %Necesito primero calcular cuántos fotones hay por canal. ¿Esto se puede
 %simplificar para no tener que repetir el find y la comparación?
@@ -68,3 +72,6 @@ for d=1:nrChannels
     end %end for (dd)
 end %end for (d)
 
+if max(dataBin(:))==255
+    disp('Error: FCSData es uint8, pero cada bin tiene más de 255 cuentas')
+end

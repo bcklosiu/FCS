@@ -7,9 +7,7 @@ function pages=pagerangeparser (rangeString, startPage, endPage)
 %
 % Si en un rango no se pone la primera, entiende que va desde la primera
 % página: por ej. -10 son las 10 primeras páginas
-% Si no se pone la última, el rango son todas las páginas menos la última
-% Si no se pone la primera, tiene que ir al principio; si no se pone la
-% última tiene que ir al final
+% Si no se pone la primera, el '-' iene que ir al principio; si no se pone la última tiene que ir al final
 %
 % Por ejemplo: rangeString puede ser '-3, 6, 15, 9-12, 23-'
 %
