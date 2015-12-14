@@ -16,6 +16,7 @@ function [imgALIN, sigma2_5, indMaxCadaLinea]=FCS_membraneAlignment_space(imgIN)
 %
 % ULS Ago14
 % jri 4Dec14
+% Unai 3Sep15- imgALIN es uint16, imgALIN_5sigma y imgALIN_5sigmaSum no se utilizan (comentadas)
 
 numLines=size(imgIN,1);
 indMaxCadaLinea=zeros(numLines,1); %Contiene los máximos de cada línea
@@ -37,7 +38,7 @@ for m1=2:numLines %Busca el máximo de cada línea
     indMaxCadaLinea(m1,1)=indMaxLinem1;
 end
 
-imgALIN=zeros(size(imgIN)); %Imagen con máximos alineados
+imgALIN=zeros(size(imgIN),'uint16'); %Imagen con máximos alineados
 for m2=1:numLines % Alinea la imagen
     difMaxLine1=indMaxCadaLinea(m2,1)-indMaxCadaLinea(1,1);
     if difMaxLine1<=0
@@ -55,8 +56,8 @@ sigma2_5=round(2.5*paramfit(4));
 FWHM=2*sqrt(2*log(2))*paramfit(4);
 strFWHM=sprintf ('%3.2f', FWHM);
 disp (['FWHM= ' strFWHM ' pixels'])
-imgALIN_5sigma=imgALIN(:,find(imgALINsum==max(imgALINsum))-sigma2_5:find(imgALINsum==max(imgALINsum))+sigma2_5);
-imgALIN_5sigmaSum=sum(imgALIN_5sigma,2);
+% imgALIN_5sigma=imgALIN(:,find(imgALINsum==max(imgALINsum))-sigma2_5:find(imgALINsum==max(imgALINsum))+sigma2_5);
+% imgALIN_5sigmaSum=sum(imgALIN_5sigma,2);
 
 %Plot
 x=1:numel(imgALINsum)/500:numel(imgALINsum);

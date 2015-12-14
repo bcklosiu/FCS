@@ -1,6 +1,6 @@
 function  varargout=FCS_load(fname)
 
-% Carga, descodifica y guarda en un .mat los datos FIFO de B&H para FCS
+% Carga, decodifica y guarda en un .mat los datos FIFO de B&H para FCS
 %
 % Para scanning FCS
 %[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
@@ -30,17 +30,10 @@ function  varargout=FCS_load(fname)
 % ULS...
 % jri - 26Nov14
 % jri - 26Mar15 - Corrijo los errores al cargar datos de scanning FCS
+% Unai, 07oct15 - No es necesario borrar photonArrivalTimes.frameLinePixel para el caso Point FCS
 
 
-isOpen=matlabpool ('size')>0;
-if isOpen==0 %Inicializa matlabpool con el máximo numero de cores
-    numWorkers=feature('NumCores'); %Número de workers activos.
-    if numWorkers>=8
-        numWorkers=8; %Para Matlab 2010b, 8 cores máximo.
-    end
-    disp (['Inicializando matlabpool con ' num2str(numWorkers) ' cores'])
-    matlabpool ('open', numWorkers)
-end
+inicializamatlabpool()
 
 
 disp (['Decoding ' fname])
@@ -49,8 +42,11 @@ tic;
 [photonArrivalTimes, imgDecode, frameSync, lineSync, pixelSync]= decodeFIFObinary_parallel (fblock, TACrange, TACgain); %Decodifica los eventos de BH
 tdecode=toc;
 
-isScanning=and (numel(imgDecode)>1, and(numel(frameSync)>1, and(numel(lineSync)>1, numel(pixelSync)>1)));
-numChannelsAcquisition=numel(unique(photonArrivalTimes(:, 6)));
+photonArrivalTimes_flp=photonArrivalTimes.frameLinePixel;
+photonArrivalTimes_c=photonArrivalTimes.channel;
+numPixels=numel(unique(photonArrivalTimes_flp(:,3)));
+isScanning=logical(numPixels-1); %Comprueba que frameSync, etc tenga elementos. Si no, es pointFCS
+numChannelsAcquisition=numel(unique(photonArrivalTimes_c));
 disp(['Number of acquisition channels: ' num2str(numChannelsAcquisition)])
 
 
@@ -63,7 +59,7 @@ if isScanning
     disp (['Saving ' fname(1:end-4) '_raw.mat'])
     save ([fname(1:end-4) '_raw.mat'], 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
 else
-    photonArrivalTimes(:, 1:3)=[];
+    
     varargout={isScanning, photonArrivalTimes, TACrange, TACgain};
     if nargout>4
         for n=5:nargout

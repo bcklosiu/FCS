@@ -2,6 +2,8 @@ function varargout = gui_FCSafterpulsing(varargin)
 
 % [tau_AP alfaCoeff OKbutton]=gui_FCSafterpulsing(tau_AP, alfaCoeff)
 
+% jri & ULS - 26Oct15
+
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -43,14 +45,14 @@ if nargin>3
 else
     v.tau_AP=[];
 end
+v.tau_AP_old=v.tau_AP;
+v.alfaCoeff_old=v.alfaCoeff;
+
 if isempty(v.tau_AP) %Por si llega un argumento vacío
     v.tau_AP=[2.76574e-07, 1.75635e-07; 7.012010e-06, 3.917470e-06; 1E-30, 1.859350e-05];
     v.alfaCoeff=[5143.28,2.879463288e+04; 486.22, 732.09; 0, 459.790];
 end
 
-
-v.tau_AP_old=v.tau_AP;
-v.alfaCoeff_old=v.alfaCoeff;
 
 v.OKbutton=false; %Si se le da a OK entonces es true; si se cierra de otra forma es false
 

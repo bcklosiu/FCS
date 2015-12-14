@@ -1,5 +1,5 @@
 function [imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
-
+ 
 %[imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
 %
 %Escoge la ROI y la alinea a uno o dos canales
@@ -8,13 +8,12 @@ function [imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align
 % jri 3Dic14 (de FCS_analisis_BH de Unai)
 % jri 27Mar15 - Corrijo para cuando tenemos dos canales que analiza por separado
 % jri 22Abr15 - Error pequeño
-
-
-
+% Unai 3Sept15 - photonArrivalTimes es una struct. Sustitución del switch final por un if.
+ 
 inicializamatlabpool();
-
-
-numCanales=numel(unique(photonArrivalTimes(:, 6)));
+ 
+numCanales=numel(unique(photonArrivalTimes.channel));
+pixelSync_flp=pixelSync.frameLinePixel;
 
 %Seleccionar ROI de la imagen decodificada
 [imgROI, ~, indLinesLS, indLinesPS, timeInterval] = FCS_ROI(imgDecode, photonArrivalTimes, lineSync, pixelSync);
@@ -33,18 +32,26 @@ else %numCanales=1;
     [imgALIN, sigma2_5, indMaxCadaLinea]=FCS_membraneAlignment_space(imgROI);
     option=1;
 end
-
+ 
 %Necesito convertir estos píxeles a tiempo y devolverlos!!
-pixelROIdesde=min(pixelSync(indLinesPS,3));
-pixelROIhasta=max(pixelSync(indLinesPS,3));
+pixelROIdesde=min(pixelSync_flp(indLinesPS,3)); 
+pixelROIhasta=max(pixelSync_flp(indLinesPS,3));
+ 
+% switch option
+%     case 3 %Suma de canales
+%         imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); %Imagen que se utilizará para el binning temporal
+%     case 4 %Para que alinee los dos canales a un único canal
+%         imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); 
+%     case 5 
+%         imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); 
+%     otherwise %Para que sólo alinee un canal
+%         imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, option); %Imagen que se utilizará para el binning temporal
+% end
 
-switch option
-    case 3%Suma de canales
-    imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); %Imagen que se utilizará para el binning temporal
-    case 4 %Para que alinee los dos canales a un único canal
-        imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); 
-    case 5 
-        imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, :); 
-    otherwise %Para que sólo alinee un canal
-    imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, option); %Imagen que se utilizará para el binning temporal
+if option>=3
+    imgBin=imgDecode(indlinesLS, pixelROIdesde:pixelROIhasta, :); %Imagen que se utilizará para el binning temporal
+else
+    imgBin=imgDecode(indLinesLS, pixelROIdesde:pixelROIhasta, option); %Imagen que se utilizará para el binning temporal
 end
+
+

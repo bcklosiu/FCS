@@ -27,6 +27,7 @@ function varargout = gui_anaFCS(varargin)
 % Begin initialization code - DO NOT EDIT
 
 % jri 20Jan2015
+% Unai, 07oct2015 - Cambios en la función loadrawphotondata, derivados del cambio de photonArrrivalTimes a struct
 
 
 gui_Singleton = 1;
@@ -60,7 +61,7 @@ set (hObject, 'CloseRequestFcn' ,@mainFigure_CloseRequestFcn)
 
 cierraFigurasMalCerradas; %Esto lo hace si ha habido un error anterior.
 
-variables.anaFCS_version='21Jul15'; %Esta es la versión del código
+variables.anaFCS_version='6Aug15'; %Esta es la versión del código
 
 variables.path=pwd;
 variables.pathSave='';
@@ -121,7 +122,7 @@ v=getappdata (handles.figure1, 'v'); %Recupera variables
 
 set (v.allFigures, 'CloseRequestFcn', 'closereq')
 close (v.allFigures)
-
+ 
 varargout{1} = handles.output;
 delete (hObject);
 
@@ -438,16 +439,15 @@ function [S R]=loadrawphotondata(fname, scannerFreq, handles)
 %fname debe llevar el path
 %S contiene los datos que guardaremos en el archivo .mat
 %R contiene los datos raw con los que opera
-load (fname, 'isScanning');
+load (fname, 'isScanning'); %Lee isScanning del archivo de _raw.mat
 S=inicializavariables();
 S.isScanning=isScanning;
 if S.isScanning
     disp ('Scanning FCS experiment')
     R=load (fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning', 'imgDecode', 'lineSync', 'pixelSync');
-    macroTimeCol=4;
-    microTimeCol=5;
-    channelsCol=6;
-    S.numChannelsAcquisition=numel(unique(R.photonArrivalTimes(:, channelsCol)));
+    photonArrivalTimes_MTmT=R.photonArrivalTimes.MacroMicroTime;
+    photonArrivalTimes_c=R.photonArrivalTimes.channel;
+    S.numChannelsAcquisition=numel(unique(photonArrivalTimes_c));
     disp(['Number of acquisition channels: ' num2str(S.numChannelsAcquisition)])
     [R.imgBin, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5, S.timeInterval]=...
         FCS_align(R.photonArrivalTimes, R.imgDecode, R.lineSync, R.pixelSync);
@@ -471,15 +471,14 @@ if S.isScanning
 else
     disp ('Point FCS experiment')
     R=load (fname, 'TACrange', 'TACgain', 'photonArrivalTimes', 'isScanning');
-    macroTimeCol=1;
-    microTimeCol=2;
-    channelsCol=3;
-    S.numChannelsAcquisition=numel(unique(R.photonArrivalTimes(:, channelsCol)));
+    photonArrivalTimes_MTmT=R.photonArrivalTimes.MacroMicroTime;
+    photonArrivalTimes_c=R.photonArrivalTimes.channel;
+    S.numChannelsAcquisition=numel(unique(photonArrivalTimes_c));
     disp(['Number of acquisition channels: ' num2str(S.numChannelsAcquisition)])
     set(handles.edit_binningLines, 'Enable', 'off', 'String', '')
     
 end
-S.acqTime=R.photonArrivalTimes(end, macroTimeCol)+R.photonArrivalTimes(end, microTimeCol)-(R.photonArrivalTimes(1, macroTimeCol)+R.photonArrivalTimes(1, microTimeCol));
+S.acqTime=photonArrivalTimes_MTmT(end, 1)+photonArrivalTimes_MTmT(end, 2)-(photonArrivalTimes_MTmT(1, 1)+photonArrivalTimes_MTmT(1, 2));
 strAcqTime=sprintf('%3.2f', S.acqTime);
 set(handles.edit_acquisitionTime, 'String', strAcqTime);
 %    save ([path FileName(1:end-4) '_tmp.mat'], '-struct', 'S')
@@ -489,20 +488,14 @@ function S=computecorrelation (S_in, R, handles)
 S=S_in; %Aquí S es todavía pequeña, así que podemos duplicarla sin problemas
 
 if S.isScanning
-    macroTimeCol=4;
-    microTimeCol=5;
-    channelsCol=6;
     S.binLines=str2double(get(handles.edit_binningLines, 'String'));
 else
-    macroTimeCol=1;
-    microTimeCol=2;
-    channelsCol=3;
-    S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String'));
+    S.binFreq=1000*str2double(get(handles.edit_binningFrequency, 'String')); %La frecuencia de binning está en kHz y la tenemos que pasar a Hz
 end
 
 S.numIntervalos=str2double(get(handles.edit_intervals, 'String'));
 S.numSubIntervalosError=str2double(get(handles.edit_subIntervalsForUncertainty, 'String'));
-S.tauLagMax=str2double(get(handles.edit_maximumTauLag, 'String'))/1000;
+S.tauLagMax=str2double(get(handles.edit_maximumTauLag, 'String'))/1000; % El taulag_max está en ms
 S.numSecciones=str2double(get(handles.edit_sections, 'String'));
 S.base=str2double(get(handles.edit_base, 'String'));
 S.numPuntosSeccion=str2double(get(handles.edit_pointsPerSection, 'String'));
@@ -669,10 +662,10 @@ if ischar(FileName)
     v.path=PathName;
     disp (['Loading ' FileName])
     v.fname=[v.path FileName];
-    if isappdata (handles.figure1, 'S')
+    if isappdata (handles.figure1, 'S') %S es una struct que contiene el análisis de FCS
         rmappdata (handles.figure1, 'S');
     end
-    if isappdata (handles.figure1, 'R')
+    if isappdata (handles.figure1, 'R') %R es una struct que contiene el raw data
         rmappdata (handles.figure1, 'R');
     end
     [S R]=loadrawphotondata(v.fname, v.scannerFreq, handles);
@@ -701,8 +694,8 @@ set (handles.menu_saveAsASCII, 'Enable', 'on')
 S=getappdata (handles.figure1, 'S'); %Recupera variables
 R=getappdata (handles.figure1, 'R'); %Recupera variables
 [S.tau_AP S.alfaCoeff S.correctAP]=gui_FCSafterpulsing(S.tau_AP, S.alfaCoeff);
-drawnow update
 set (handles.figure1,'Pointer','watch')
+drawnow update
 S=computecorrelation (S, R, handles);
 disp ('OK')
 set (handles.figure1,'Pointer','arrow')
@@ -906,18 +899,7 @@ if ischar(FileName)
         S.intervalosPromediados=1:S.numIntervalos;
     end
     %Fin de la preparación
-    
-    if S.isScanning
-        macroTimeCol=4;
-        microTimeCol=5;
-        channelsCol=6;
-    else
-        macroTimeCol=1;
-        microTimeCol=2;
-        channelsCol=3;
-    end
-    
-    %acqTime=S.photonArrivalTimes(end, macroTimeCol)+S.photonArrivalTimes(end, microTimeCol)-(S.photonArrivalTimes(1, macroTimeCol)+S.photonArrivalTimes(1, microTimeCol));
+        
     strAcqTime=sprintf('%3.2f', S.acqTime);
     set(handles.edit_acquisitionTime, 'String', strAcqTime);
     set(handles.edit_intervals, 'String', num2str(S.numIntervalos));

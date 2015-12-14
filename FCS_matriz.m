@@ -44,13 +44,13 @@ end
 M=zeros(numPuntosCorrFinal, numColumnasM, numIntervalos, 'double');
 cpsIntervalos=zeros(numIntervalos, numCanales, 'double');
 
-for intervalo=1:numIntervalos
+for intervalo=1:numIntervalos, 
     FCSintervalo=FCSData((intervalo-1)*numDataIntervalos+1:intervalo*numDataIntervalos, :);
     if not(isfloat(FCSintervalo)) %De esta forma lo único que es double es la parte con la que hace el subbinning
         FCSintervalo=double(FCSintervalo);
     end
     M (:, :, intervalo)=FCS_stdev(FCSintervalo, numSubIntervalosError, deltaTBin, numSecciones, numPuntosSeccion, base, tauLagMax);
-
+    
     cpsIntervalos(intervalo, :)=round(squeeze(sum(FCSintervalo, 1, 'double'))/(numDataIntervalos*deltaTBin));
 
 end

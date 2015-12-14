@@ -19,22 +19,11 @@ function dataBin=FCS_binning_FIFO_pixel1(arrivalTimes, binFreq, t0)
 % jri 4May15 - Convierto FCSData en uint8
 % jri 21Jul15 - Comentarios
 % jri 22Jul15 - Advertencia si databin es mayor que 255
+% Unai: 13ago2015 - arrivalTimes es de tipo struct
 
-
-
-
-isScanning = logical(size(arrivalTimes,2)-3);
-if isScanning
-    macroTimeCol=4;
-    microTimeCol=5;
-    channelsCol=6;
-else
-    macroTimeCol=1;
-    microTimeCol=2;
-    channelsCol=3;
-end
-
-channels=sort(unique(arrivalTimes(:, channelsCol)),'ascend');
+arrivalTimes_MTmT=arrivalTimes.MacroMicroTime;
+arrivalTimes_c=arrivalTimes.channel;
+channels=sort(unique(arrivalTimes_c),'ascend');
 nrChannels=numel(channels);
 deltaTBin=1/binFreq; %Período de binning
 numFotCh=zeros(nrChannels, 1); %Número de fotones de cada canal
@@ -42,18 +31,17 @@ numFotCh=zeros(nrChannels, 1); %Número de fotones de cada canal
 %Necesito primero calcular cuántos fotones hay por canal. ¿Esto se puede
 %simplificar para no tener que repetir el find y la comparación?
 for cc=1:nrChannels, %Identifica los fotones de cada canal
-    indsxCh=arrivalTimes(:, channelsCol)==channels(cc);
+    indsxCh=arrivalTimes_c==channels(cc);
     numFotCh(cc)=numel(find(indsxCh==1));
 end 
 
 numFotonesMaximoCanal=max(numFotCh(:))+1;
 data=zeros(numFotonesMaximoCanal, nrChannels); %Matriz de tiempos por canal
 for cc=1:nrChannels, %Identifica los fotones de cada canal
-    indsxCh=arrivalTimes(:, channelsCol)==channels(cc);
+    indsxCh=arrivalTimes_c==channels(cc);
     numFotCh(cc)=numel(find(indsxCh==1));
-    data(1:numFotCh(cc), cc)=arrivalTimes(indsxCh, macroTimeCol)+arrivalTimes(indsxCh, microTimeCol)-t0; %MT+mT-tiempo referencia
+    data(1:numFotCh(cc), cc)=arrivalTimes_MTmT(indsxCh,1)+arrivalTimes_MTmT(indsxCh,2)-t0; %MT+mT-tiempo referencia
 end %end for (cc)
-
 
 MTmax=max(data(:)); %MT del último fotón válido
 numfildataBin=MTmax/(deltaTBin); %Nro. de filas de dataBin

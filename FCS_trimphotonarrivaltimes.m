@@ -9,6 +9,8 @@ function varargout=FCS_trimphotonarrivaltimes(photonArrivalTimes, imgDecode, fra
 % photonArrivalTimes de 6 o 3 columnas según sea scanning o point FCS
 % 
 % jri - 26Nov14
+% Unai - 11ago15: photonArrivalTimes es una struct. En caso de point FCS,
+% se elimina 
 
 isScanning=and (numel(imgDecode)>1, and(numel(frameSync)>1, and(numel(lineSync)>1, numel(pixelSync)>1)));
 
@@ -21,7 +23,8 @@ if isScanning
     save (fname, 'photonArrivalTimes', 'imgDecode', 'frameSync', 'lineSync', 'pixelSync', 'TACrange', 'TACgain', 'fname', 'isScanning')
     disp ('OK')
 else
-    photonArrivalTimes(:, 1:3)=[];
+%     photonArrivalTimes(:, 1:3)=[];
+    photonArrivalTimes=rmfield(photonArrivalTimes, 'frameLinePixel');
     varargout={photonArrivalTimes, isScanning};
     disp ('Point FCS experiment')
 %    disp (['Decode time:' numstr(tdecode/60) ' min'])

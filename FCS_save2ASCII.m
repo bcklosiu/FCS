@@ -26,7 +26,7 @@ if isempty(pos)
 end
 nombreFCSData=fileName(pos+1:end-4);
 disp (['Saving ' nombreFCSData ' as ASCII'])
-fid=fopen(fileName, 'w'); %Esto lo hice muy bien en genpol
+fid=fopen(fileName, 'wt'); %Esto lo hice muy bien en genpol
 fprintf(fid, '%s', datestr(now));
 fprintf(fid, '\n%s', fileName);
 fprintf(fid, '\nChannel:\t');

@@ -12,24 +12,28 @@ function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync,
 % ULS Ago14
 % jri 4Dec14
 % jri 4May15 - Convierto FCSData en uint8 pero hay que estar a loro porque me parece que está duplicando el uso de memoria con los cores.
+% Unai 13ago15 - Cambios Unai: lineSync es de tipo struct.
 
-
+%%
 imgCut=imgNOalineada(indLineasLS,:,:);
 numChannels=size(imgCut,3);
 limitesImg5sigma= [indMaxCadaLinea-sigma2_5, indMaxCadaLinea+sigma2_5];
 numLineas=(size(imgCut,1));
 numPixeles=(size(imgCut,2));
 limitesImg5sigma(limitesImg5sigma(:,1)<1, 1)=1; %Busca los límites de la imagen menores que 1
-limitesImg5sigma(limitesImg5sigma(:,2)>numPixeles, 2)=numPixeles; %Busca los límites de la imagen mayores que 1
-lineSynccut=lineSync(indLineasLS,:);
+limitesImg5sigma(limitesImg5sigma(:,2)>numPixeles, 2)=numPixeles; %Busca los límites de la imagen mayores que numPixeles
+lineSync_fl=lineSync.frameLine;
+lineSync_t=lineSync.time;
+lineSynccut_fl=lineSync_fl(indLineasLS,:);
+lineSynccut_t=lineSync_t(indLineasLS,:);
 
-% Cálculo de la frecuencia de binning (binFreq)
-primerFrame=lineSynccut(1,1);
-indPrincipioFrame=find(lineSynccut(:,1)==primerFrame+3,1,'first');
-indFinalFrame=find(lineSynccut(:,1)==primerFrame+3,1,'last');
+%% Cálculo de la frecuencia de binning (binFreq)
+primerFrame=lineSynccut_fl(1,1);
+indPrincipioFrame=find(lineSynccut_fl(:,1)==primerFrame+3,1,'first');
+indFinalFrame=find(lineSynccut_fl(:,1)==primerFrame+3,1,'last');
 tLineas=zeros(indFinalFrame-(indPrincipioFrame+1)-1,1); %Tiempo de escaneo de cada línea del frame
 for lineaLS=1:numel(tLineas)
-    tLineas(lineaLS)=lineSynccut(lineaLS+1,3)-lineSynccut(lineaLS,3);
+    tLineas(lineaLS)=lineSynccut_t(lineaLS+1,1)-lineSynccut_t(lineaLS,1);
 end
 media=mean2(tLineas);
 desv=std(tLineas);
@@ -38,7 +42,7 @@ tPromedioLinea=mean2(tLineas(lineasValidas));
 deltaTBin=multiploLineas*tPromedioLinea;
 binFreq=1/deltaTBin;
 
-% Paralelización (SPMD)
+%% Paralelización (SPMD)
 numWorkers=feature('NumCores'); %Nº de cores 
 if numWorkers>=8
     numWorkers=8; %Para Matlab 2010b, 8 cores máximo.
@@ -55,7 +59,7 @@ parLimitesImg5sigma=[limitesImg5sigma; ones(restoLineas,2)];
 parImgCut=[imgCut;zeros(restoLineas,size(imgCut,2),numChannels)];
 parNumLineas=size(parIndLineasIMG,1);
 FCSDataBin=zeros(parNumLineas*numWorkers, numChannels, 'uint8'); %Atención estás duplicando la memoria
-
+%%
 spmd (numWorkers)
     parFCSDataBin=zeros(parNumLineas, numChannels, 'uint8'); %Atención estás duplicando la memoria?
     for channel=1:numChannels
@@ -73,7 +77,7 @@ spmd (numWorkers)
     end  %end for channel
 end %end spmd
 
-% Reorganizar datos del binning en FCSDataBin
+%% Reorganizar datos del binning en FCSDataBin
 for core=1:numWorkers
     binningWorker=cell2mat(parFCSDataBin(core));
     FCSDataBin((core-1)*parNumLineas+1:core*parNumLineas,:)=binningWorker;

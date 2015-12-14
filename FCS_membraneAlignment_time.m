@@ -9,16 +9,30 @@ function [FCSdataALINcorregido,tPromedioLS]=FCS_membraneAlignment_time(FCSdataIN
 % FCSdataALINcorregido es la matriz de fotones alineados (5sigma) y corregidos temporalmente: corrige el tiempo que se pierde en cada cambio de frame 
 % y el tiempo con respecto al pixel de referencia (alineado).
 % tPromedioLS es el tiempo de escaneo de una línea.
+% 
+% 12ago15: Cambios Unai. FCSdata IN, lineSync y pixelSync son variables de entrada de tipo struct. FCSdataALINcorregido es una variable de salida de tipo struct.
 
-FCSdataINcut=FCSdataIN(indLineasFCS,:);
+%%
+FCSdata_flp=FCSdataIN.frameLinePixel;
+FCSdata_MTmT=FCSdataIN.MacroMicroTime;
+FCSdata_c=FCSdataIN.channel;
+FCSdataINcut=FCSdata_flp(indLineasFCS,:);
+FCSdataINcut_MTmT=FCSdata_MTmT(indLineasFCS,:);
+FCSdataINcut_c=FCSdata_c(indLineasFCS);
 offsetFramesFCS=FCSdataINcut(1,1);
 FCSdataINcut(:,1)=FCSdataINcut(:,1)-offsetFramesFCS; % Para poner el primer frame a 0 por si indLinesFCS no tiene datos para el primer frame
-lineSynccut=lineSync(indLineasLS,:);
-lineSynccut(:,1)=lineSynccut(:,1)-lineSynccut(1,1); % Para poner el primer frame a 0 por si indLinesLS no tiene datos para el primer frame
-pixelSynccut=pixelSync(indLineasPS,:);
-pixelSynccut(:,1)=pixelSynccut(:,1)-pixelSynccut(1,1); % Para poner el primer frame a 0 por si indLinesPS no tiene datos para el primer frame
+lineSync_fl=lineSync.frameLine;
+lineSync_t=lineSync.time;
+lineSynccut_fl=lineSync_fl(indLineasLS,:);
+lineSynccut_t=lineSync_t(indLineasLS,:);
+lineSynccut_fl(:,1)=lineSynccut_fl(:,1)-lineSynccut_fl(1,1); % Para poner el primer frame a 0 por si indLinesLS no tiene datos para el primer frame
+pixelSync_flp=pixelSync.frameLinePixel;
+pixelSync_t=pixelSync.time;
+pixelSynccut_flp=pixelSync_flp(indLineasPS,:);
+pixelSynccut_t=pixelSync_t(indLineasPS,:);
+pixelSynccut_flp(:,1)=pixelSynccut_flp(:,1)-pixelSynccut_flp(1,1); % Para poner el primer frame a 0 por si indLinesPS no tiene datos para el primer frame
 numPhots=size(FCSdataINcut,1);
-numPixels=size(pixelSynccut,1);
+numPixels=size(pixelSynccut_flp,1);
 
 offsetLineasIMG=1; %Nº de línea de imgIN en el que se encuentra el primer fotón
 numPhotLine=numel(find(imgIN(offsetLineasIMG,:)));
@@ -36,28 +50,27 @@ ind1FCS=1;
 ind1PS=1;
 for m3=1:numFrames %Encuentra el índice en el que cambia de frame FCSdataINcut, lineSynccut y pixelSynccut
     indCambioFrameFCS=find(FCSdataINcut(:,1)==m3-1,1,'last');
-    indCambioFramePS=find(pixelSynccut(:,1)==m3-1,1,'last');
-    indCambioFrameLS(m3)=find(lineSynccut(:,1)==m3-1,1,'last');
+    indCambioFramePS=find(pixelSynccut_flp(:,1)==m3-1,1,'last');
+    indCambioFrameLS(m3)=find(lineSynccut_fl(:,1)==m3-1,1,'last');
     FCSdataINcut2(ind1FCS:indCambioFrameFCS,1)=FCSdataINcut(ind1FCS:indCambioFrameFCS,2)+sumaLineas;
-    pixelSynccut2(ind1PS:indCambioFramePS,1)=pixelSynccut(ind1PS:indCambioFramePS,2)+sumaLineas;
-    sumaLineas=sumaLineas+lineSynccut(indCambioFrameLS(m3),2);
+    pixelSynccut2(ind1PS:indCambioFramePS,1)=pixelSynccut_flp(ind1PS:indCambioFramePS,2)+sumaLineas;
+    sumaLineas=sumaLineas+lineSynccut_fl(indCambioFrameLS(m3),2);
     ind1FCS=indCambioFrameFCS+1;
     ind1PS=indCambioFramePS+1;
 end
 FCSdataINcut2(:,1)=FCSdataINcut2(:,1)-(FCSdataINcut2(1,1)-offsetLineasIMG); % Para que el valor de las líneas se inicie en el valor correspondiente
 FCSdataINcut2(:,2)=FCSdataINcut(:,3);
 pixelSynccut2(:,1)=pixelSynccut2(:,1)-(pixelSynccut2(1,1)-1); % Para que el valor de las líneas se inicie en 1
-pixelSynccut2(:,2)=pixelSynccut(:,3);
+pixelSynccut2(:,2)=pixelSynccut_flp(:,3);
 indMaxCadaLineaLimiteDerecha=indMaxCadaLinea+sigma2_5+offset+1; 
 indMaxCadaLineaLimiteIzquierda=indMaxCadaLinea-sigma2_5+offset-1; 
 filasConPhots=unique(FCSdataINcut2(:,1)); %Filas de FCSdataINcut2 que contienen fotones
 numFilasConPhots=numel(filasConPhots);
 
-
-%Cálcula la líneas que se pierden al final de cada frame, y el tiempo promedio de escaneo de una línea
-difLineSync=zeros(size(lineSynccut,1)-1,1); %Diferencia de tiempos en líneas consecutivas
+%% Cálcula la líneas que se pierden al final de cada frame, y el tiempo promedio de escaneo de una línea
+difLineSync=zeros(size(lineSynccut_fl,1)-1,1); %Diferencia de tiempos en líneas consecutivas
 for m3_1=1:size(difLineSync,1)
-    difLineSync(m3_1)=lineSynccut(m3_1+1,3)-lineSynccut(m3_1,3);
+    difLineSync(m3_1)=lineSynccut_t(m3_1+1,1)-lineSynccut_t(m3_1,1);
 end
 difLineSynccut=difLineSync;
 difLineSynccut(indCambioFrameLS(1:end-1),:)=[]; %Todas las líneas menos las últimas de cada frame
@@ -65,7 +78,7 @@ tPromedioLS=mean(difLineSynccut); %Tiempo promedio de escaneo de una línea
 lineasPerdidasCadaFrame=round(difLineSync(indCambioFrameLS(1:end-1))/tPromedioLS)-1; %Líneas que se pierden al final de cada frame
 
 
-% Paralelización (SPMD)
+%% Paralelización (SPMD)
 numWorkers=feature('NumCores'); %Nº de cores
     if numWorkers>=8
         numWorkers=8; %Para Matlab 2010b, 8 cores máximo.
@@ -105,7 +118,7 @@ spmd (numWorkers)
     parindPixelSync(cuentaPhot+1:end,:)=[];
 end %end spmd
 
-
+%%
 matCuentaPhot=cell2mat(cuentaPhot(:,:));
 indFCSdata=zeros(sum(matCuentaPhot),1); % Indices de FCSdataINcut
 indPixelSync=zeros(sum(matCuentaPhot),2); %Indices de pixelSynccut
@@ -119,17 +132,20 @@ for m7=2:numWorkers
 end
 [indFCSdata,orden]=(sort(indFCSdata,'ascend'));
 indPixelSync=indPixelSync(orden,:);
-FCSdataALIN=FCSdataINcut(indFCSdata,:);
-tCorregidoLineas=zeros(size(FCSdataALIN,1),1);
-indCambioFrameFCSalin=find(FCSdataALIN(:,1)==0,1,'last');
+FCSdataALIN_flp=FCSdataINcut(indFCSdata,:);
+FCSdataALIN_MTmT=FCSdataINcut_MTmT(indFCSdata,:);
+FCSdataALIN_c=FCSdataINcut_c(indFCSdata);
+tCorregidoLineas=zeros(size(FCSdataALIN_flp,1),1);
+indCambioFrameFCSalin=find(FCSdataALIN_flp(:,1)==0,1,'last');
 tCorregidoLineas(1:indCambioFrameFCSalin)=0;
 indCambioFrameDesde=indCambioFrameFCSalin+1;
 for m8=2:numFrames %Encuentra el indice en el que cambia de frame FCSdataALIN
-   indCambioFrameFCSalin=find(FCSdataALIN(:,1)==m8-1,1,'last');
+   indCambioFrameFCSalin=find(FCSdataALIN_flp(:,1)==m8-1,1,'last');
    indCambioFrameHasta=indCambioFrameFCSalin;
    tCorregidoLineas(indCambioFrameDesde:indCambioFrameHasta)=sum(lineasPerdidasCadaFrame(1:m8-1))*tPromedioLS;
    indCambioFrameDesde=indCambioFrameFCSalin+1;
 end
 tCorregidoLineas(indCambioFrameDesde:end)=sum(lineasPerdidasCadaFrame)*tPromedioLS;
-tCorregidoFCSalin=FCSdataALIN(:,4)+pixelSynccut(indPixelSync(:,1),4)-pixelSynccut(indPixelSync(:,2),4)-tCorregidoLineas;
-FCSdataALINcorregido=[FCSdataALIN(:,1)+offsetFramesFCS,FCSdataALIN(:,2:3),tCorregidoFCSalin,FCSdataALIN(:,5:6)];
+tCorregidoFCSalin=FCSdataALIN_MTmT(:,1)+pixelSynccut_t(indPixelSync(:,1),1)-pixelSynccut_t(indPixelSync(:,2),1)-tCorregidoLineas;
+FCSdataALINcorregido=struct('frameLinePixel',[FCSdataALIN_flp(:,1)+offsetFramesFCS,FCSdataALIN_flp(:,2:3)],'MacroMicroTime',[tCorregidoFCSalin,FCSdataALIN_MTmT(:,2)],...
+    'channel',FCSdataALIN_c);

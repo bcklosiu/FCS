@@ -35,7 +35,7 @@ function varargout=FCS_computecorrelation (varargin)
 %   Si es cero calcula la incertidumbre para el promedio de las curvas como SEM de las curvas promediadas
 %   tipoCorrelacion puede ser 1 o 2 para autocorrelación de los canales 1 o 2, respectivamente, o 3 para ambas
 %
-%   TAC range y TACgain dependen del reloj SYNC (ya o hay que introducirlos como argumentos)
+%   TAC range y TACgain dependen del reloj SYNC (ya no hay que introducirlos como argumentos)
 %
 %   binLines es el número de líneas con las que se hace binning en el caso de scanning FCS
 %
@@ -47,10 +47,11 @@ function varargout=FCS_computecorrelation (varargin)
 % jri 25Nov14
 % jri 22Ene15 - Corrijo el deltaTbin, que faltaba para el point-FCS
 % jri 24Abr15 - Añado las cuentas por segundo y corrijo tData para que sea el t de los FCSintervalos y no el de FCSData
-% jri 28Apr15 - Añado cps por intervalo y ambio FCS promedio para que FCSmean la calcule fuera de FCSpromedio
+% jri 28Apr15 - Añado cps por intervalo y cambio FCS promedio para que FCSmean la calcule fuera de FCSpromedio
 % jri 4May15 - Calculo los intervalos uno de cada vez para evitar duplicar FCSData
 % jri 4May15 - Convierto FCSData en uint8
 % jri 21Jul15 - Comentarios
+% Unai 18Sept15 - photonArrivalTimes es una struct. Para el caso de scanning FCS da error: la llamada a FCS_binning_FIFO_lines es incorrecta.
 
 
 
@@ -67,27 +68,24 @@ tipoCorrelacion=varargin{9};
 % Es esto necesario?
 inicializamatlabpool();
 
-isScanning = logical(size(photonArrivalTimes,2)-3); %isScanning es true si se trata de scanning FCS; sino, false
+photonArrivalTimes_flp=photonArrivalTimes.frameLinePixel;
+photonArrivalTimes_MTmT=photonArrivalTimes.MacroMicroTime;
+photonArrivalTimes_c=photonArrivalTimes.channel;
+numPixels=numel(unique(photonArrivalTimes_flp(:,3)));
+isScanning = logical(numPixels-1); %isScanning es true si se trata de scanning FCS; sino, false
 if isScanning
     binLines=varargin{3};
     imgBin=varargin{10};
     lineSync=varargin{11};
     indLinesLS=varargin{12};
     indMaxCadaLinea=varargin{13};
-    sigma2_5=varargin{14};
-    
-    macroTimeCol=4;
-    microTimeCol=5;
-    channelsCol=6;
+    sigma2_5=varargin{14};  
     
 else
     binFreq=varargin{3};
-    macroTimeCol=1;
-    microTimeCol=2;
-    channelsCol=3;
 end
 
-numCanales=numel(unique(photonArrivalTimes(:, channelsCol)));
+numCanales=numel(unique(photonArrivalTimes_c));
 
 if isScanning
     [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
@@ -96,12 +94,12 @@ if isScanning
 else %isSCanningFCS==0 -  Esto es FCS puntual
     switch numCanales
         case 1
-            t0=photonArrivalTimes(1, macroTimeCol)+photonArrivalTimes(1, microTimeCol); %pixel de referencia para binning (1er photon)
+            t0=photonArrivalTimes_MTmT(1,1)+photonArrivalTimes_MTmT(1,2); %pixel de referencia para binning (1er photon)
         case 2
             t0channels=zeros(numCanales, 1);
             for channel=1:numCanales
-                indPrimerPhotonCanal=find(photonArrivalTimes(:, channelsCol)==channel-1,1,'first');
-                t0channels(channel)=photonArrivalTimes(indPrimerPhotonCanal, macroTimeCol)+photonArrivalTimes(indPrimerPhotonCanal, microTimeCol);
+                indPrimerPhotonCanal=find(photonArrivalTimes_c==channel-1,1,'first');
+                t0channels(channel)=photonArrivalTimes_MTmT(indPrimerPhotonCanal,1)+photonArrivalTimes_MTmT(indPrimerPhotonCanal,2);
             end
             t0=min(t0channels);
     end
