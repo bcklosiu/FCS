@@ -75,7 +75,7 @@ numPixels=numel(unique(photonArrivalTimes_flp(:,3)));
 isScanning = logical(numPixels-1); %isScanning es true si se trata de scanning FCS; sino, false
 if isScanning
     binLines=varargin{3};
-    imgBin=varargin{10};
+    imgROI=varargin{10};
     lineSync=varargin{11};
     indLinesLS=varargin{12};
     indMaxCadaLinea=varargin{13};
@@ -88,7 +88,8 @@ end
 numCanales=numel(unique(photonArrivalTimes_c));
 
 if isScanning
-    [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgBin, lineSync, indLinesLS, indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
+    [FCSData, deltaTBin]=FCS_binning_FIFO_lines(imgROI, lineSync, indLinesLS,...
+        indMaxCadaLinea, sigma2_5, binLines); % Binning temporal de imgBIN, en múltiplos de línea de la imagen (binLines)
     binFreq=1/deltaTBin;
     
 else %isSCanningFCS==0 -  Esto es FCS puntual

@@ -1,4 +1,4 @@
-function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync, indLineasLS, indMaxCadaLinea, sigma2_5, multiploLineas)
+function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgROI, lineSync, indLineasLS, indMaxCadaLinea, sigma2_5, multiploLineas)
 
 %[FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync, indLineasLS, indMaxCadaLinea, sigma2_5, multiploLineas)
 %
@@ -13,27 +13,28 @@ function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgNOalineada, lineSync,
 % jri 4Dec14
 % jri 4May15 - Convierto FCSData en uint8 pero hay que estar a loro porque me parece que está duplicando el uso de memoria con los cores.
 % Unai 13ago15 - Cambios Unai: lineSync es de tipo struct.
+% Unai 19may15 - Al programa se le pasa imgROI en lugar de imgDecode y las coordenadas que lo delimitan (indLineasPS)
 
 %%
-imgCut=imgNOalineada(indLineasLS,:,:);
-numChannels=size(imgCut,3);
+figure;imagesc(imgROI)
+numChannels=size(imgROI,3);
 limitesImg5sigma= [indMaxCadaLinea-sigma2_5, indMaxCadaLinea+sigma2_5];
-numLineas=(size(imgCut,1));
-numPixeles=(size(imgCut,2));
+numLineas=(size(imgROI,1));
+numPixeles=(size(imgROI,2));
 limitesImg5sigma(limitesImg5sigma(:,1)<1, 1)=1; %Busca los límites de la imagen menores que 1
 limitesImg5sigma(limitesImg5sigma(:,2)>numPixeles, 2)=numPixeles; %Busca los límites de la imagen mayores que numPixeles
 lineSync_fl=lineSync.frameLine;
 lineSync_t=lineSync.time;
-lineSynccut_fl=lineSync_fl(indLineasLS,:);
-lineSynccut_t=lineSync_t(indLineasLS,:);
+lineSyncROI_fl=lineSync_fl(indLineasLS,:);
+lineSyncROI_t=lineSync_t(indLineasLS,:);
 
 %% Cálculo de la frecuencia de binning (binFreq)
-primerFrame=lineSynccut_fl(1,1);
-indPrincipioFrame=find(lineSynccut_fl(:,1)==primerFrame+3,1,'first');
-indFinalFrame=find(lineSynccut_fl(:,1)==primerFrame+3,1,'last');
+primerFrame=lineSyncROI_fl(1,1);
+indPrincipioFrame=find(lineSyncROI_fl(:,1)==primerFrame+3,1,'first');
+indFinalFrame=find(lineSyncROI_fl(:,1)==primerFrame+3,1,'last');
 tLineas=zeros(indFinalFrame-(indPrincipioFrame+1)-1,1); %Tiempo de escaneo de cada línea del frame
 for lineaLS=1:numel(tLineas)
-    tLineas(lineaLS)=lineSynccut_t(lineaLS+1,1)-lineSynccut_t(lineaLS,1);
+    tLineas(lineaLS)=lineSyncROI_t(lineaLS+1,1)-lineSyncROI_t(lineaLS,1);
 end
 media=mean2(tLineas);
 desv=std(tLineas);
@@ -56,20 +57,20 @@ end
 parIndLineasIMG=reshape(indLineasIMG,[],numWorkers);
 restoLineas=parIndLineasIMG(end)+multiploLineas-1-numLineas; %Nº de lineas restantes para poder paralelizar
 parLimitesImg5sigma=[limitesImg5sigma; ones(restoLineas,2)];
-parImgCut=[imgCut;zeros(restoLineas,size(imgCut,2),numChannels)];
+parImgROI=[imgROI;zeros(restoLineas,size(imgROI,2),numChannels)];
 parNumLineas=size(parIndLineasIMG,1);
 FCSDataBin=zeros(parNumLineas*numWorkers, numChannels, 'uint8'); %Atención estás duplicando la memoria
 %%
 spmd (numWorkers)
     parFCSDataBin=zeros(parNumLineas, numChannels, 'uint8'); %Atención estás duplicando la memoria?
     for channel=1:numChannels
-        parImgCutTemp=parImgCut(:,:,channel); %Matriz temporal, solo un canal
+        parImgROItemp=parImgROI(:,:,channel); %Matriz temporal, solo un canal
         for parLine=1:parNumLineas
             indDesde=parIndLineasIMG(parLine,labindex);
             indHasta=indDesde+multiploLineas-1;
             cuentaPhots=0;
                 for line=indDesde:indHasta,
-                    numPhotsTemp=sum(parImgCutTemp(line,parLimitesImg5sigma(line,1):parLimitesImg5sigma(line,2)));
+                    numPhotsTemp=sum(parImgROItemp(line,parLimitesImg5sigma(line,1):parLimitesImg5sigma(line,2)));
                     cuentaPhots=cuentaPhots+numPhotsTemp;
                 end %end for line
             parFCSDataBin(parLine,channel)=cuentaPhots;

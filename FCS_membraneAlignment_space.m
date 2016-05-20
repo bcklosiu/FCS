@@ -8,10 +8,9 @@ function [imgALIN, sigma2_5, indMaxCadaLinea]=FCS_membraneAlignment_space(imgIN)
 % 3- Ajusta la suma a una gaussiana
 % 4- Selecciona 5sigma de la matriz alineada
 % 5- Suma cada columa de la matriz 5sigma y crea imgALIN_5sigmaSum
-% 6- Crea FCSdataALIN: Selecciona los datos válidos (5sigma) de FCSdataIN
 % 
 % imgALIN - imgIN con los máximos alineados
-% sigma2_5 - 
+% sigma2_5 - Nº de píxeles que se seleccionan a cada lado del máximo (5sigma/2)
 % indMaxCadaLinea - Contiene los máximos de cada línea
 %
 % ULS Ago14

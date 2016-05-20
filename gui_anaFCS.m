@@ -28,6 +28,7 @@ function varargout = gui_anaFCS(varargin)
 
 % jri 20Jan2015
 % Unai, 07oct2015 - Cambios en la función loadrawphotondata, derivados del cambio de photonArrrivalTimes a struct
+% Unai, 19may2015 - Cambios en la función computecorrelation: La imagen a la que se le pasaba indMaxCadaLinea era imgDecode en lugar de imgROI
 
 
 gui_Singleton = 1;
@@ -449,9 +450,9 @@ if S.isScanning
     photonArrivalTimes_c=R.photonArrivalTimes.channel;
     S.numChannelsAcquisition=numel(unique(photonArrivalTimes_c));
     disp(['Number of acquisition channels: ' num2str(S.numChannelsAcquisition)])
-    [R.imgBin, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5, S.timeInterval]=...
+    [R.imgROI, R.indLinesLS, R.indLinesPS, R.indMaxCadaLinea, S.sigma2_5, S.timeInterval]=...
         FCS_align(R.photonArrivalTimes, R.imgDecode, R.lineSync, R.pixelSync);
-    %imgBin, indLinesLS, indMaxCadaLinea están en R, por tanto no se
+    %imgROI, indLinesLS, indMaxCadaLinea están en R, por tanto no se
     %guardarán al darle a save, aunque están disponibles durante la sesión
     strT0=sprintf('%3.2f', S.timeInterval(1));
     strTf=sprintf('%3.2f', S.timeInterval(2));
@@ -518,7 +519,7 @@ S.intervalosPromediados=1:S.numIntervalos; %Al principio promediamos todos
 if S.isScanning
     [~, S.Gintervalos, S.Gmean, S.cps, S.cpsIntervalos, ~, S.binFreq, S.FCSTraza, S.tTraza]=...
         FCS_computecorrelation (R.photonArrivalTimes, S.numIntervalos, S.binLines, S.tauLagMax, S.numSecciones, S.numPuntosSeccion, S.base, S.numSubIntervalosError, S.tipoCorrelacion, ...
-        R.imgBin, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
+        R.imgROI, R.lineSync, R.indLinesLS, R.indMaxCadaLinea, S.sigma2_5);
     strBinFreq=sprintf('%3.2f', S.binFreq/1000); %Actualiza el binFreq. esto debería hacerlo solo desde el principio.
     set (handles.edit_binningFrequency, 'String', strBinFreq);
 else

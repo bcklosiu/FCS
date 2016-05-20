@@ -10,7 +10,8 @@ ind= fblock>0;
 fblock_pos= fblock(ind); % Nos quedamos con los mayores de 0
 fclose (fidSPC);
 
-fname=strtok(fnameSPC,'.');
+ind_fname=strfind(fnameSPC,'.spc');
+fname=fnameSPC(1:ind_fname-1);
 fnameSET=strcat(fname,'.set');
 %lectura SET
 fidSET=fopen (fnameSET);

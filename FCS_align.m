@@ -1,6 +1,6 @@
-function [imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
+function [imgROI, indLinesLS, indLinesPS,indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
  
-%[imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
+%[imgROI, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align(photonArrivalTimes, imgDecode, lineSync, pixelSync)
 %
 %Escoge la ROI y la alinea a uno o dos canales
 %
@@ -9,11 +9,11 @@ function [imgBin, indLinesLS, indMaxCadaLinea, sigma2_5, timeInterval]=FCS_align
 % jri 27Mar15 - Corrijo para cuando tenemos dos canales que analiza por separado
 % jri 22Abr15 - Error pequeño
 % Unai 3Sept15 - photonArrivalTimes es una struct. Sustitución del switch final por un if.
+% Unai 19may15 - Se elimina imgBin por estar duplicada. Es igual que imgROI.
  
 inicializamatlabpool();
  
 numCanales=numel(unique(photonArrivalTimes.channel));
-pixelSync_flp=pixelSync.frameLinePixel;
 
 %Seleccionar ROI de la imagen decodificada
 [imgROI, ~, indLinesLS, indLinesPS, timeInterval] = FCS_ROI(imgDecode, photonArrivalTimes, lineSync, pixelSync);
@@ -30,12 +30,7 @@ if numCanales>1
     
 else %numCanales=1;
     [imgALIN, sigma2_5, indMaxCadaLinea]=FCS_membraneAlignment_space(imgROI);
-    option=1;
 end
- 
-%Necesito convertir estos píxeles a tiempo y devolverlos!!
-pixelROIdesde=min(pixelSync_flp(indLinesPS,3)); 
-pixelROIhasta=max(pixelSync_flp(indLinesPS,3));
  
 % switch option
 %     case 3 %Suma de canales
@@ -47,11 +42,3 @@ pixelROIhasta=max(pixelSync_flp(indLinesPS,3));
 %     otherwise %Para que sólo alinee un canal
 %         imgBin=imgDecode(:, pixelROIdesde:pixelROIhasta, option); %Imagen que se utilizará para el binning temporal
 % end
-
-if option>=3
-    imgBin=imgDecode(indlinesLS, pixelROIdesde:pixelROIhasta, :); %Imagen que se utilizará para el binning temporal
-else
-    imgBin=imgDecode(indLinesLS, pixelROIdesde:pixelROIhasta, option); %Imagen que se utilizará para el binning temporal
-end
-
-
