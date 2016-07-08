@@ -321,20 +321,16 @@ data_MacroMicroTime(numPhots+1:end,:)=[];
 data_channel(numPhots+1:end,:)=[]; 
 
 acqChannels=unique(data_channel);
-nr_RoutChannels=numel(acqChannels); %Nr. of acquired channels
-dif_channels=(acqChannels-uint8(0:1:nr_RoutChannels-1)'); %Difference between the acquistion channels and consecutive channels
-%The acquisition channels may not be consecutive. The following if loop affects the initialisation of twoDIntensity. To avoid more Z planes than expected.
-if(not(isempty(find(dif_channels~=0, 1)))) 
+nr_RoutChannels=numel(acqChannels);
+dif_channels=(acqChannels-(1:1:nr_RoutChannels)'); %The acquisition channels may not be consecutive
+if(not(isempty(find(dif_channels~=0, 1))))
     data_channel_sort=zeros(size(data_channel),'uint8');
     for ch=1:nr_RoutChannels,
         indChannel=data_channel==acqChannels(ch);
-        data_channel_sort(indChannel)=ch-1;
+        data_channel_sort(indChannel)=ch;
     end %end for(ch)
-else
-    data_channel_sort=data_channel;
 end %end if(isempty)
-
-twoDIntensity=zeros(numLinesTotal, numPixels-1, nr_RoutChannels, 'uint16'); %Decoded image initialisation
+twoDIntensity=zeros(numLinesTotal, numPixels-1, nr_RoutChannels, 'uint16'); %Decoded image
 
 switch acqType
     case {1,2}
@@ -343,8 +339,7 @@ switch acqType
         data_frameLinePixel(not(indIMG),:)=[];
         data_MacroMicroTime(not(indIMG),:)=[]; 
         data_channel(not(indIMG),:)=[];
-        data_channel_sort(not(indIMG),:)=[];
-        numPhotFin= size(data_MacroMicroTime,1);% Number of photons for the whole acquisition
+        numPhotFin= size(data_channel,1);% Number of photons for the whole acquisition
 
         % Filling frameSync, lineSync and pixelSync in 
         matFrameSync=cell2mat(parFrameCount(:,:)); 
@@ -381,8 +376,7 @@ switch acqType
     
         if acqType==1 %FIFO Image
             for c=1:numPhotFin %Image recontruction (FIFO Image)
-                twoDIntensity(data_frameLinePixel(c,2),data_frameLinePixel(c,3),data_channel_sort(c,1)+1)=...
-                    twoDIntensity(data_frameLinePixel(c,2),data_frameLinePixel(c,3),data_channel_sort(c,1)+1)+1;
+                twoDIntensity(data_frameLinePixel(c,2),data_frameLinePixel(c,3),data_channel(c,1)+1)=twoDIntensity(data_frameLinePixel(c,2),data_frameLinePixel(c,3),data_channel(c,1)+1)+1;
             end     %end for(c)
         
         else % Scanning FCS 
@@ -400,8 +394,8 @@ switch acqType
             end %end for(e)
 
             for f=1:numPhotFin % Image recontruction (Scanning FCS)
-                twoDIntensity(rSum(f)+data_frameLinePixel(f,2),data_frameLinePixel(f,3),data_channel_sort(f,1)+1)=...
-                    twoDIntensity(rSum(f)+data_frameLinePixel(f,2),data_frameLinePixel(f,3),data_channel_sort(f,1)+1)+1;
+                twoDIntensity(rSum(f)+data_frameLinePixel(f,2),data_frameLinePixel(f,3),data_channel(f,1)+1)=...
+                    twoDIntensity(rSum(f)+data_frameLinePixel(f,2),data_frameLinePixel(f,3),data_channel(f,1)+1)+1;
             end     % end for(f)
         end %end if (FIFO Image/Scanning FCS)
 

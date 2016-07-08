@@ -16,7 +16,7 @@ function [FCSDataBin, deltaTBin]=FCS_binning_FIFO_lines(imgROI, lineSync, indLin
 % Unai 19may15 - Al programa se le pasa imgROI en lugar de imgDecode y las coordenadas que lo delimitan (indLineasPS)
 
 %%
-figure;imagesc(imgROI)
+% figure;imagesc(imgROI)
 numChannels=size(imgROI,3);
 limitesImg5sigma= [indMaxCadaLinea-sigma2_5, indMaxCadaLinea+sigma2_5];
 numLineas=(size(imgROI,1));
