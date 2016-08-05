@@ -98,9 +98,9 @@ set (variables.allFigures, 'CloseRequestFcn', @FigCloseRequestFcn)
 S=inicializavariables();
 variables.scannerFreq=1400; %Por ahora en variables, hasta que decida qué hacer con ella
 R=struct();
-setappdata (handles.figure1, 'v', variables);  %Convierte variablesapl en datos de la aplicación con el nombre v
-setappdata (handles.figure1, 'S', S);  %Convierte variablesapl en datos de la aplicación con el nombre v
-setappdata (handles.figure1, 'R', R);  %Convierte variablesapl en datos de la aplicación con el nombre v
+setappdata (handles.figure1, 'v', variables);  %Convierte variables en datos de la aplicación con el nombre v
+setappdata (handles.figure1, 'S', S);  %Convierte datos de FCS en datos de la aplicación con el nombre S
+setappdata (handles.figure1, 'R', R);  %Convierte datos decodificados en datos de la aplicación con el nombre R
 
 % Choose default command line output for gui_anaFCS
 handles.output = hObject;
@@ -551,14 +551,14 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(FileName)
     v.path=PathName;
-    R.rawFile=[PathName FileName];
+    R.rawFile=[PathName FileName]; 
     pos=find(v.path=='\', 2, 'last');
     nombreFCSData=['...' R.rawFile(pos:end-4)];
-    set (handles.figure1, 'Name' , nombreFCSData)
+    set (handles.figure1, 'Name' , nombreFCSData);
     rmappdata (handles.figure1, 'S'); %Hace espacio para las siguientes
     rmappdata (handles.figure1, 'R');
     S=inicializavariables();
-    [S.isScanning, R.photonArrivalTimes, R.TACrange, R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(R.rawFile);
+    [S.isScanning, R.photonArrivalTimes, R.TACrange, R.TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(R.rawFile); 
     if S.isScanning
         R.imgDecode=imgDecode;
         R.frameSync=frameSync;
@@ -567,13 +567,10 @@ if ischar(FileName)
     end
 end
 
-set (handles.figure1,'Pointer','arrow')
-setappdata(handles.figure1, 'v', R); %Guarda los cambios en variables
-setappdata(handles.figure1, 'v', S);
-%[isScanning, photonArrivalTimes, TACrange, TACgain, imgDecode, frameSync, lineSync, pixelSync] = FCS_load(fname)
-%
-% Para point FCS
-% [isScanning, photonArrivalTimes, TACrange, TACgain]= FCS_load(fname)
+set (handles.figure1,'Pointer','arrow')  
+setappdata(handles.figure1, 'R', R); %Guarda los cambios en variables
+setappdata(handles.figure1, 'S', S);
+
 
 
 
@@ -857,6 +854,7 @@ setappdata(handles.figure1, 'v', v); %Guarda los cambios en variables
 function menu_averageFCSCurves_Callback(hObject, eventdata, handles)
 v=getappdata (handles.figure1, 'v'); %Recupera variables
 S=getappdata (handles.figure1, 'S');
+h_figCPS=figure; plot(1:1:S.numIntervalos, S.cpsIntervalos); xlabel('Time intervals'); ylabel('Counts per second')
 
 answer=inputdlg('Average FCS curves: ', 'Average', 1);
 if not(isempty(answer))
@@ -866,12 +864,10 @@ if not(isempty(answer))
     usaSubIntervalosError=logical(S.numSubIntervalosError);
     S.Gmean=FCS_promedio(S.Gintervalos, S.intervalosPromediados, usaSubIntervalosError);
     FCS_representaG (S.Gmean, S.tipoCorrelacion, v.h_figPromedio);
-    promedioString='';
-    for n=1:numel(S.intervalosPromediados)
-        promedioString=[promedioString num2str(S.intervalosPromediados(n)), ', '];
-    end
-    promedioString=promedioString(1:end-2); %Le quito la última ', '
+    promedioString=sprintf('%.0d,', S.intervalosPromediados);
+    promedioString(end)=[]; %Le quito la última ','
     set (v.h_figPromedio, 'NumberTitle', 'off', 'Name', ['Average: ' promedioString])
+    figure(h_figCPS); plot(S.intervalosPromediados, S.cpsIntervalos(S.intervalosPromediados));
 end
 setappdata (handles.figure1, 'S', S);
 

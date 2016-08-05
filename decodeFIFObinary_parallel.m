@@ -91,8 +91,6 @@ end %end if (numWorkers)
 %% First event
 event1=fblock(1);
 MacroTimeClock=double(bitand(event1,MT_CLK32))/10; %Macro Time clock (in 0.1 ns unit);
-% % % nr_RoutChannels=bitshift(bitand(event1,RB_NO32),-27)+1; %Nr. of routing channels within the acquisition
-
 foundFrame = find(bitand(fblock,F_MARK32) == F_MARK32); %Frame events in fblock
 foundLine = find(bitand(fblock,L_MARK32) == L_MARK32); %Line events in fblock
 
@@ -182,7 +180,6 @@ lineSync_fl=zeros (numLinesTotal,2,'uint32'); %lineSync_frameLine
 lineSync_t=zeros(numLinesTotal,1,'double'); %lineSync_time
 pixelSync_flp=zeros (numPixelTotal, 3, 'uint32'); %pixelSync_frameLinePixel
 pixelSync_t=zeros (numPixelTotal, 1, 'double'); %pixelSync_time
-% % % twoDIntensity=zeros(numLinesTotal, numPixels-1, nr_RoutChannels, 'uint16'); %Decoded image
 
 %% Parallelised code: every event will be decoded and stored in its corresponding worker. The created variables are composites.
 spmd (numWorkers)
