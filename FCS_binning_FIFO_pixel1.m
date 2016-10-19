@@ -51,7 +51,7 @@ else
     dimDataBin=ceil(numfildataBin);
 end
 
-dataBin=zeros(dimDataBin, nrChannels, 'uint8');
+dataBin=zeros(dimDataBin, nrChannels, 'uint16');
 for d=1:nrChannels
     binHasta=numFotCh(d); %límite superior del for anidado
     for dd=1:binHasta
@@ -60,6 +60,6 @@ for d=1:nrChannels
     end %end for (dd)
 end %end for (d)
 
-if max(dataBin(:))==255
-    disp('Error: FCSData es uint8, pero cada bin tiene más de 255 cuentas')
-end
+% if max(dataBin(:))==255, 2^16????
+%     disp('Error: FCSData es uint8, pero cada bin tiene más de 255 cuentas')
+% end

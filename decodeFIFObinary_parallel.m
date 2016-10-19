@@ -107,7 +107,7 @@ else %FIFO Point
     acqType=3;
 end
 
-
+    
 switch acqType
     case {1,2} %FIFO Image or Scanning FCS
         data_frameLinePixel=zeros(numValidEvents, 3, 'uint32');
@@ -262,8 +262,8 @@ spmd (numWorkers)
                 channel=uint8(bitshift(bitand(parEventdata,ROUT32),-12)); % Routing channel 
                 parData_MacroMicroTime(photonCount,:)=[photonMacroTime, photonMicroTime];
                 parData_channel(photonCount)=channel;
-                if acqType<3,
-                parData_frameLinePixel(photonCount,:)=[currentFrame, currentLine, currentPixel]; 
+                if acqType<3, %not FIFO Point
+                    parData_frameLinePixel(photonCount,:)=[currentFrame, currentLine, currentPixel]; 
                 end
                 
             case photon_event  %Photon detected
@@ -276,16 +276,19 @@ spmd (numWorkers)
                 channel=double(bitshift(bitand(parEventdata,ROUT32),-12)); %Routing channel 
                 parData_MacroMicroTime(photonCount,:)=[photonMacroTime, photonMicroTime];
                 parData_channel(photonCount,:)=channel;
-                if acqType<3,
-                parData_frameLinePixel(photonCount,:)=[currentFrame, currentLine, currentPixel];
+                if acqType<3, %not FIFO Point
+                    parData_frameLinePixel(photonCount,:)=[currentFrame, currentLine, currentPixel];
                 end
                 
         end     %end switch(event_adcM)
     end     % end for(bb)
     
-    parData_frameLinePixel(photonCount+1:end,:)=[]; %Remove empty rows in parData_frameLinePixel (if any)
-    parData_MacroMicroTime(photonCount+1:end,:)=[]; %Remove empty rows in parData_MacroMicroTime (if any)
-    parData_channel(photonCount+1:end,:)=[]; %Remove empty rows in parData_channel(if any)
+    if acqType<3, %not FIFO Point
+        parData_frameLinePixel(photonCount+1:end,:)=[]; %Remove empty rows in parData_frameLinePixel (if any)
+    end
+        parData_MacroMicroTime(photonCount+1:end,:)=[]; %Remove empty rows in parData_MacroMicroTime (if any)
+        parData_channel(photonCount+1:end,:)=[]; %Remove empty rows in parData_channel(if any)
+    
     
 end     %end spmd (Parallelised code)
 
