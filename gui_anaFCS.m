@@ -630,7 +630,15 @@ set (handles.figure1,'Pointer','watch')
 drawnow update
 if ischar(pathName)
     v.path=[pathName '\'];
-    d=dir([v.path '*.mat']);
+    if isfield (v,'nameTail')
+        nameTail=v.nameTail;
+    else
+        matStruct=dir([v.path '*.mat']);
+        rawStruct=dir([v.path '*_raw.mat']);
+        [nameTail]=findNameTail(matStruct,rawStruct);
+    end
+    nameTailExtension_find=strcat('*',nameTail,'.mat');
+    d=dir([v.path nameTailExtension_find]);
     numFiles=numel(d);
     disp (['Saving ' num2str(numFiles) ' files as ASCII'])
     for n=1:numFiles;
@@ -712,6 +720,7 @@ if ischar(pathName)
     set (handles.figure1,'Pointer','watch')
     drawnow update
     v.path=[pathName '\'];
+    v.nameTail=nameTail;
     d=dir([v.path '*_raw.mat']);
     numFiles=numel(d);
     disp (['Correlating ' num2str(numFiles) ' files'])
