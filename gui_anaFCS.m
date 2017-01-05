@@ -22,13 +22,14 @@ function varargout = gui_anaFCS(varargin)
 
 % Edit the above text to modify the response to help gui_anaFCS
 
-% Last Modified by GUIDE v2.5 21-Jul-2015 19:19:22
+% Last Modified by GUIDE v2.5 05-Jan-2017 15:30:30
 
 % Begin initialization code - DO NOT EDIT
 
 % jri 20Jan2015
 % Unai, 07oct2015 - Cambios en la función loadrawphotondata, derivados del cambio de photonArrrivalTimes a struct
 % Unai, 19may2015 - Cambios en la función computecorrelation: La imagen a la que se le pasaba indMaxCadaLinea era imgDecode en lugar de imgROI
+% Unai, 05ene2016 - Se aánde la opción 'Check CPS' al menú
 
 
 gui_Singleton = 1;
@@ -683,6 +684,7 @@ if ischar(FileName)
     disp ('OK')
     %Habilita el menú correspondiente
     set (handles.menu_computeCorrelation, 'Enable', 'on')
+    set (handles.menu_checkCPS, 'Enable', 'on')
 end
 
 set (handles.figure1,'Pointer','arrow')
@@ -948,6 +950,17 @@ if ischar(FileName)
     set (handles.menu_averageFCSCurves, 'Enable', 'on')
     set (handles.menu_saveFCSAnalysis, 'Enable', 'on')
     set (handles.menu_saveAsASCII, 'Enable', 'on')
-  
 end
+
+% --------------------------------------------------------------------
+function menu_checkCPS_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_checkCPS (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+R=getappdata (handles.figure1, 'R'); %Recupera variables raw
+pat=R.photonArrivalTimes;
+gui_binning(pat);
+
+
+
 

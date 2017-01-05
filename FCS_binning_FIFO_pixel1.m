@@ -35,22 +35,22 @@ for cc=1:nrChannels, %Identifica los fotones de cada canal
     numFotCh(cc)=numel(find(indsxCh==1));
 end 
 
-numFotonesMaximoCanal=max(numFotCh(:))+1;
+numFotonesMaximoCanal=max(numFotCh(:));
 data=zeros(numFotonesMaximoCanal, nrChannels); %Matriz de tiempos por canal
 for cc=1:nrChannels, %Identifica los fotones de cada canal
     indsxCh=arrivalTimes_c==channels(cc);
     numFotCh(cc)=numel(find(indsxCh==1));
     data(1:numFotCh(cc), cc)=arrivalTimes_MTmT(indsxCh,1)+arrivalTimes_MTmT(indsxCh,2)-t0; %MT+mT-tiempo referencia
 end %end for (cc)
-
+   
 MTmax=max(data(:)); %MT del último fotón válido
 numfildataBin=MTmax/(deltaTBin); %Nro. de filas de dataBin
 if rem(MTmax,deltaTBin)==0,
     dimDataBin=ceil(numfildataBin)+1;
-else
+else 
     dimDataBin=ceil(numfildataBin);
 end
-
+    
 dataBin=zeros(dimDataBin, nrChannels, 'uint16');
 for d=1:nrChannels
     binHasta=numFotCh(d); %límite superior del for anidado
