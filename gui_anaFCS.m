@@ -29,7 +29,7 @@ function varargout = gui_anaFCS(varargin)
 % jri 20Jan2015
 % Unai, 07oct2015 - Cambios en la función loadrawphotondata, derivados del cambio de photonArrrivalTimes a struct
 % Unai, 19may2015 - Cambios en la función computecorrelation: La imagen a la que se le pasaba indMaxCadaLinea era imgDecode en lugar de imgROI
-% Unai, 05ene2016 - Se aánde la opción 'Check CPS' al menú
+% Unai, 05ene2016 - Se añade la opción 'Check CPS' al menú
 
 
 gui_Singleton = 1;
